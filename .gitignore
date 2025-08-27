@@ -1,0 +1,19 @@
+benchmarks/
+models/
+results/
+log/
+hostfiles/
+
+# Ignore Python bytecode
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Ignore virtual environment folders
+venv/
+.env/
+
+# Ignore IDE/project settings
+.vscode/
+.idea/
