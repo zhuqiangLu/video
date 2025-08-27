@@ -1,0 +1,6 @@
+datasets==4.0.0
+decord
+transformers==4.51.3
+numpy==1.26.0
+matplotlib 
+flash-attn

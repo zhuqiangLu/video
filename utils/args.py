@@ -1,0 +1,27 @@
+import argparse
+
+def get_args():
+    parser = argparse.ArgumentParser(description='Evaluation for this bench')
+    parser.add_argument('--dataset_name', default='videomme', type=str, help='Specify the dataset.')
+    parser.add_argument('--data_files', default=None, type=str, help='Specify the data files.')
+    parser.add_argument('--video_root', default='', type=str, help='Specify the video root.')
+    parser.add_argument('--split', default='default', type=str, help='Specify the split.')
+    parser.add_argument("--model_base", type=str, default="/path/to/qwen-model")
+    parser.add_argument("--batch_size", type=int, default=1, help="Batch size")
+    parser.add_argument("--result_dir", type=str, default="checkpoints", help="Directory to save checkpoints")
+    parser.add_argument("--num_gpus", type=int, default=1, help="GPU device to use")
+    parser.add_argument("--cur_gpu", type=int, default=0, help="Current GPU device")
+    parser.add_argument("--no_video",  action="store_true", default=False, help="Not passing video to model")
+    parser.add_argument("--shuffle_video", action="store_true", default=False, help="Shuffle video")
+    parser.add_argument("--shuffle_frame", action="store_true", default=False, help="Shuffle frame")
+    parser.add_argument("--limit", type=float, default=1,  help="dataset size")
+    parser.add_argument("--combine_type", type=str, default='target_first', help="combine type")
+    parser.add_argument("--custom_question", type=str, default=None, help="custom question")
+    parser.add_argument("--add_extra_options", action="store_true", help="add extra options")
+    parser.add_argument("--no_target_video", action="store_true", help="no target video")
+    parser.add_argument("--replace_correct_with_extra", action="store_true",  default=False,help="replace correct with extra video")
+    parser.add_argument("--num_extra_video", type=int, default=0, help="number of extra video")
+    parser.add_argument("--max_num_frames", type=int, default=16, help="max number of frames")
+
+    return parser.parse_args()
+
