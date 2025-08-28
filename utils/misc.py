@@ -6,7 +6,8 @@ import random
 # from GQA_TEMPLATE import GQA_TEMPLATE
 from tqdm import tqdm 
 import os
-from dataloader import build_data
+from dataloader import data_builder
+import torch
 
 
 GQA_TEMPLATE = """Answer the question: "[QUESTION]" according to the content of the video. Select the answer from :[OPTION]. Only output the corresponding letter of the option.
@@ -66,7 +67,7 @@ def encode_video(target_video_path, extra_video_paths, max_num_frames=10, combin
         raise ValueError(f"Invalid combine_type: {combine_type}")
     
     all_frames = []
-    for video_path in [target_video_path, *extra_video_paths]:
+    for video_path in video_paths:
 
         vr = VideoReader(video_path, ctx=cpu(0))
         sample_fps = round(vr.get_avg_fps() / 1)  # FPS
@@ -81,34 +82,34 @@ def encode_video(target_video_path, extra_video_paths, max_num_frames=10, combin
 
     return all_frames
 
-def get_frames(video_path, extra_video_paths, combine_type='target_first', max_num_frames=10):
-    frames = encode_video(video_path, extra_video_paths, combine_type=combine_type, max_num_frames=max_num_frames)
-    if 'static' in custom_question:
+def get_frames(video_path, extra_video_paths, frozen_video=False, combine_type=None, shuffle_frame=False, max_num_frames=10):
+    frames = encode_video(video_path, extra_video_paths, combine_type=combine_type, max_num_frames=max_num_frames,)
+    if frozen_video:
         # Get a random frame and duplicate it
         random_frame = random.choice(frames)
         frames = [random_frame] * max_num_frames
-        print("static video")
+        print("frozen video")
 
     if shuffle_frame:
         random.shuffle(frames)
         print("frame shuffled")
-    return frames 
-
-
-def get_dataset(args):
-    dataset = build_data(args.dataset_name, args.video_root, args.data_files, shuffle_video=args.shuffle_video, num_gpus=args.num_gpus, cur_gpu=args.cur_gpu, limit=args.limit, num_extra_video=args.num_extra_video)
-    return dataset
+    return frames
 
 
 def run_experiment(
-    inference_func,
+    # inference_func,
+    get_inputs_func,
+    decode_func,
     dataset,
     model_base,
+    setup_model_func,
     device,
     result_dir,
     max_num_frames,
+    max_new_tokens,
     shuffle_frame=False,
     shuffle_video=False,
+    frozen_video=False,
     no_video=False,
     num_gpus=1,
     cur_id=0,
@@ -118,7 +119,7 @@ def run_experiment(
     no_target_video=False,
     replace_correct_with_extra=False,
 ):
-    model, processor = setup_model(model_base, device)
+    model, processor = setup_model_func(model_base, device)
     
     '''
        Manage the saved file name 
@@ -142,9 +143,14 @@ def run_experiment(
         opts += "_replace_correct_with_extra"
     if shuffle_frame:
         opts += "_shuffle_frame"
-    
+    if frozen_video:
+        opts += "_frozen_video"
     os.makedirs(f"{result_dir}/{model_base.replace('/', '-')}{opts}", exist_ok=True)
     log_path = f"{result_dir}/{model_base.replace('/', '-')}{opts}/{cur_id}.jsonl"
+
+    # rm log_path 
+    if os.path.exists(log_path):
+        os.remove(log_path)
 
     
     pbar = tqdm(dataset)
@@ -177,12 +183,12 @@ def run_experiment(
             options = ["A.1", f"B.{len(item['extra_video_path'])+1}", "C.7", "D.3"]
             answer = "B" 
 
-        if custom_question == 'static_video_count_frame':
+        if custom_question == 'frozen_video_count_frame':
             question = f"The given video is static. How many frames are in the video?\n"
             options = ["A.1", f"B.{max_num_frames}", "C.7", "D.3"]
             answer = "B" 
 
-        if custom_question == 'static_video_bool':
+        if custom_question == 'frozen_video_bool':
             question = f"Is the given video frozen? \n"
             options = ["A.True", "B.False"]
             answer = "A" 
@@ -222,9 +228,24 @@ def run_experiment(
         accs = []
   
 
-        pred = inference_func(video_path, prompt, model, processor, shuffle_frame=shuffle_frame, max_num_frames=max_num_frames, device=device, extra_video_paths=extra_video_paths, combine_type=combine_type, custom_question=custom_question)
+        pred = inference(video_path,
+                         get_inputs_func, 
+                         decode_func, 
+                         prompt, 
+                         model, 
+                         processor, 
+                         shuffle_frame=shuffle_frame, 
+                         frozen_video=frozen_video,
+                         no_video=no_video, 
+                         max_num_frames=max_num_frames, 
+                         max_new_tokens=max_new_tokens,
+                         device=device, 
+                         extra_video_paths=extra_video_paths, 
+                         combine_type=combine_type, 
+                         custom_question=custom_question, 
+                         )
 
-    
+        acc = 0.0
         if extract_characters_regex(answer) == extract_characters_regex(pred):
             acc = 1.0
 
@@ -235,9 +256,55 @@ def run_experiment(
 
         
         
-        item_res = {'video_path': video_path, 'prompt':prompt, 'gt':answer, 'pred':ans, 'acc':acc }
+        item_res = {'video_path': video_path, 'prompt':prompt, 'gt':answer, 'pred':pred, 'acc':acc }
         append_to_jsonl(log_path, item_res)
         
         pbar.set_postfix({'accuracy': sum(accs)/len(accs), "gpu_id": cur_id})
         
    
+
+
+
+
+def inference(video_path, 
+              get_inputs_func,
+              decode_func,
+              prompt, 
+              model, 
+              processor, 
+              shuffle_frame=False, 
+              frozen_video=False,
+              no_video=False, 
+              max_num_frames=10, 
+              max_new_tokens=20, 
+              device="cuda:0", 
+              extra_video_paths=[], 
+              combine_type=None, 
+              custom_question=None,
+              ):
+   
+    
+    frames = get_frames(video_path, extra_video_paths, frozen_video=frozen_video, combine_type=combine_type, shuffle_frame=shuffle_frame, max_num_frames=max_num_frames)
+    
+    inputs = get_inputs_func(prompt, frames, processor, no_video=no_video)
+
+   
+    inputs = inputs.to(device)
+    input_ids = inputs.input_ids
+   
+
+    with torch.no_grad():
+        output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens, use_cache=True, )
+
+
+
+
+    if decode_func is None:
+        generated_ids = [output_ids[i][len(inputs.input_ids[i]):] for i in range(len(output_ids))]
+        output_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)
+        return output_text[0]
+    else:
+        output_text = decode_func(output_ids, inputs, processor)
+        return output_text
+
+    

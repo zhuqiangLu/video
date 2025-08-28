@@ -5,13 +5,17 @@ import random
 from .utils import split_data
 
 
+from .builder import register
 
+
+@register("VideoEval-Pro")
 class VideoEvalProDataset(Dataset):
-    def __init__(self, dataset_path, dataset_name='TIGER-Lab/VideoEval-Pro', data_files=None, shuffle_video=False, num_gpus=1, cur_gpu=0, limit=None, num_extra_video=0):
+    def __init__(self, dataset_path, dataset_name='TIGER-Lab/VideoEval-Pro', data_files=None, shuffle_video=False, num_gpus=1, cur_gpu=0, limit=None, num_extra_video=0, use_local_parquest=False):
         print(dataset_name, data_files)
-        self.dataset = load_dataset(dataset_name, split='test', data_files={'test': data_files})
-        # self.dataset = load_dataset(dataset_name, split='test')
-        # self.dataset = load_dataset("parquet", data_files=data_files)
+        if use_local_parquest:
+            self.dataset = load_dataset("parquet", split='test', data_files={'test': data_files})
+        else:
+            self.dataset = load_dataset(dataset_name, split='test', data_files={'test': data_files})
 
         self.video_root = os.path.join(dataset_path)
         self.shuffle_video = shuffle_video

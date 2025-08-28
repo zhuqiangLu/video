@@ -4,9 +4,12 @@ from torch.utils.data import Dataset
 import random
 from .utils import split_data
 from pprint import pprint
+from .builder import register
 
+
+@register("MotionBench")
 class MotionBenchDataset(Dataset):
-    def __init__(self, dataset_path, dataset_name=None, data_files=None, shuffle_video=False, num_gpus=1, cur_gpu=0, limit=None, num_extra_video=0):
+    def __init__(self, dataset_path, dataset_name=None, data_files=None, shuffle_video=False, num_gpus=1, cur_gpu=0, limit=None, num_extra_video=0, **kwargs):
 
         print('WARNING: MotionBenchDataset will ignore argment: dataset_name, but instead uses the video_info.meta.jsonl')
         # self.dataset = load_dataset(dataset_name, split='test')

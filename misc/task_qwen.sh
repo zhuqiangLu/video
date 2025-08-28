@@ -47,7 +47,7 @@ OUTPUT_LOG="./log/train_rank${NODE_RANK}_${JOB_ID}.log"
 
 # export CUDA_HOME=/home/bingxing2/apps/cuda/11.7.0
 export LD_PRELOAD=/home/bingxing2/ailab/scxlab0109/.conda/envs/dna_ft/lib/python3.8/site-packages/sklearn/__check_build/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
-export HF_ENDPOINT=https://hf-mirror.com
+# export HF_ENDPOINT=https://hf-mirror.com
 
 
 # --pad=128 >> ${OUTPUT_LOG} 2>&1

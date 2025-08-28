@@ -1,6 +1,10 @@
+
 datasets==4.0.0
 decord
-transformers==4.51.3
+transformers==4.55.3 # 
 numpy==1.26.0
 matplotlib 
 flash-attn
+accelerate
+timm
+num2words
