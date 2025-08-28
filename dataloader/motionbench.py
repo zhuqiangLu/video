@@ -9,7 +9,7 @@ from .builder import register
 
 @register("MotionBench")
 class MotionBenchDataset(Dataset):
-    def __init__(self, dataset_path, dataset_name=None, data_files=None, shuffle_video=False, num_gpus=1, cur_gpu=0, limit=None, num_extra_video=0, **kwargs):
+    def __init__(self, dataset_path, dataset_name=None, data_files=None, shuffle_video=False, num_gpus=1, cur_gpu=0, limit=None, num_extra_video=0, use_local_parquest=False, **kwargs):
 
         print('WARNING: MotionBenchDataset will ignore argment: dataset_name, but instead uses the video_info.meta.jsonl')
         # self.dataset = load_dataset(dataset_name, split='test')
@@ -92,6 +92,7 @@ class MotionBenchDataset(Dataset):
     def __getitem__(self, idx):
         item = self.dataset[idx]
         if self.shuffle_video:
+            print('shuffle video')
             video_path = random.choice(self.all_video_paths)
             video_path = os.path.join(self.video_root, video_path)
         else:

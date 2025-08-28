@@ -55,16 +55,21 @@ def encode_video(target_video_path, extra_video_paths, max_num_frames=10, combin
         gap = len(l) / n
         idxs = [int(i * gap + gap / 2) for i in range(n)]
         return [l[i] for i in idxs]
-
+    
     if combine_type == 'target_first':
+        print(f'target_first with num video: {len(extra_video_paths)}')
         video_paths = [target_video_path, *extra_video_paths]
     elif combine_type == 'target_last':
+        print('target_last with num video: {len(extra_video_paths)}')
         video_paths = [*extra_video_paths, target_video_path]
-    elif combine_type == 'random':
-        video_paths = [target_video_path, *extra_video_paths]
+    elif combine_type == 'target_middle':
+        print('target_middle with num video: {len(extra_video_paths)}')
+        video_paths = [*extra_video_paths[:1], target_video_path, *extra_video_paths[1:]]
         random.shuffle(video_paths)
     else:
-        raise ValueError(f"Invalid combine_type: {combine_type}")
+        video_paths = [target_video_path]
+        print(f'no combine with num video: {len(extra_video_paths)} for option {combine_type}, do nothing')
+        
     
     all_frames = []
     for video_path in video_paths:
@@ -174,17 +179,29 @@ def run_experiment(
 
             question = f"Which part of the video is most relevant to the given term: {item['options'][option_num]}?\n"
             options = ["A.beginning", "B.middle", "C.end"]
-            answer = "A" if combine_type == 'target_first' else "C" if combine_type == 'target_last' else "B" if combine_type == 'random' else "A"
+            if combine_type == 'target_first':
+                answer = "A"
+            elif combine_type == 'target_last':
+                answer = "C"
+            elif combine_type == 'target_middle':
+                answer = "B"
+            else:
+                raise ValueError(f"Invalid combine_type: {combine_type}")
             # example_prompt = GQA_TEMPLATE.replace("[QUESTION]", question)
             # prompt = example_prompt.replace("[OPTION]", str(options))
         
         if custom_question == 'video_number':
             question = f"The given video is combined by multiple videos. How many videos are combined?\n"
-            options = ["A.1", f"B.{len(item['extra_video_path'])+1}", "C.7", "D.3"]
-            answer = "B" 
+            correct_num = len(item['extra_video_path'])+1 
+            # Generate 3 random numbers from 0-10 excluding correct_num
+            possible_nums = list(range(11))
+            possible_nums.remove(correct_num)
+            wrong_nums = np.random.choice(possible_nums, size=3, replace=False)
+            options = [f"A.{wrong_nums[0]}", f"B.{wrong_nums[1]}", f"C.{wrong_nums[2]}", f"D.{correct_num}"]
+            answer = "D" 
 
-        if custom_question == 'frozen_video_count_frame':
-            question = f"The given video is static. How many frames are in the video?\n"
+        if custom_question == 'count_frame':
+            question = f"How many frames are in the video?\n"
             options = ["A.1", f"B.{max_num_frames}", "C.7", "D.3"]
             answer = "B" 
 

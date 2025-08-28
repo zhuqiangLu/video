@@ -8,7 +8,8 @@ from modeling import modeling_funcs_builder
 from dataloader import data_builder
 
 
-
+from transformers import logging
+logging.set_verbosity_error()
      
 
 

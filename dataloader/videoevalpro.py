@@ -36,6 +36,7 @@ class VideoEvalProDataset(Dataset):
     def __getitem__(self, idx):
         item = self.dataset[idx]
         if self.shuffle_video:
+            print('shuffle video')
             video_path = random.choice(os.listdir(self.video_root))
             video_path = os.path.join(self.video_root, video_path)
         else:

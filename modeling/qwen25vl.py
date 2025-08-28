@@ -16,6 +16,8 @@ def get_inputs_func(prompt, frames, processor, no_video=False):
         content.append(
             {"type": "video", "video": frames,}
         )
+    else:
+        print('no video')
 
         
     content.append(

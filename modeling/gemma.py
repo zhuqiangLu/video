@@ -17,6 +17,8 @@ def get_inputs_func(prompt, frames, processor,  no_video=False):
     if not no_video:
         for image in frames:
             content.append({"type": "image", "image": image})
+    else:
+        print('no video')
     messages = [
         {"role": "user", "content": content},
     ]
