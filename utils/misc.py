@@ -60,10 +60,10 @@ def encode_video(target_video_path, extra_video_paths, max_num_frames=10, combin
         print(f'target_first with num video: {len(extra_video_paths)}')
         video_paths = [target_video_path, *extra_video_paths]
     elif combine_type == 'target_last':
-        print('target_last with num video: {len(extra_video_paths)}')
+        print(f'target_last with num video: {len(extra_video_paths)}')
         video_paths = [*extra_video_paths, target_video_path]
     elif combine_type == 'target_middle':
-        print('target_middle with num video: {len(extra_video_paths)}')
+        print(f'target_middle with num video: {len(extra_video_paths)}')
         video_paths = [*extra_video_paths[:1], target_video_path, *extra_video_paths[1:]]
         random.shuffle(video_paths)
     else:
