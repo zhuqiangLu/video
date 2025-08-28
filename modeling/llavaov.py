@@ -20,31 +20,22 @@ def get_inputs_func(prompt, frames, processor, no_video=False):
 
     if not no_video:
         # we use dummy video to get video placeholder 
-        content.append({"type": "video", "path": "./asset/test.mp4"})
+        # content.append({"type": "video", "path": "./asset/test.mp4"})
+        for _ in frames:
+            content.append({"type": "image"})
     else:
         print("no video")
     messages = [
         {"role": "user", "content": content},
     ]
-    
-
-    inputs = processor.apply_chat_template(
-        messages,
-        add_generation_prompt=True,
-        tokenize=True,
-        return_dict=True,
-        return_tensors="pt",
-        num_frames=len(frames),
-    ).to(dtype=torch.bfloat16)
+    prompt = processor.apply_chat_template(messages, add_generation_prompt=True)
+    inputs = processor(images=frames, text=prompt, return_tensors='pt').to(torch.bfloat16)
+    # print(inputs.keys())
+    # raise
     
    
-    inputs.pixel_values = processor.video_processor(frames, return_tensors="pt").pixel_values.to(dtype=torch.bfloat16)
-    # pixel_values_test = torch.cat(pixel_values_test, dim=0).to(dtype=torch.bfloat16)
-
-
-    # print(inputs.input_ids.shape, inputs.pixel_values.shape, pixel_values_test.shape)
-    # raise
-
+    # inputs.pixel_values = processor.video_processor(frames, return_tensors="pt").pixel_values.to(dtype=torch.bfloat16)
+    
 
     return inputs
 
