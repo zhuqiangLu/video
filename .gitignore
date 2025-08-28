@@ -3,6 +3,7 @@ models/
 results/
 log/
 hostfiles/
+results*
 
 # Ignore Python bytecode
 *.pyc
