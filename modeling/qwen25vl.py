@@ -45,7 +45,7 @@ def get_inputs_func(prompt, frames, processor, no_video=False):
 
 
 def setup_model(model_base, device, text_only_model=False):
-
+    print(f"setup_model {model_base}")
 
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
         model_base,

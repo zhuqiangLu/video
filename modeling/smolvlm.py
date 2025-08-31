@@ -51,6 +51,7 @@ def get_inputs_func(prompt, frames, processor, no_video=False):
 
 
 def setup_model(model_base, device, text_only_model=False):
+    print(f"setup_model {model_base}")
 
     
     model = AutoModelForImageTextToText.from_pretrained(

@@ -3,6 +3,8 @@ import json
 import sys
 from glob import glob 
 import numpy as np 
+
+
 if __name__ == '__main__':
     src_dir = sys.argv[1]
     all_jonsl = glob(os.path.join(src_dir, '*.jsonl')) 

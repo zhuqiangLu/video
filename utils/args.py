@@ -24,6 +24,6 @@ def get_args():
     parser.add_argument("--max_num_frames", type=int, default=16, help="max number of frames")
     parser.add_argument("--use_local_parquest", action="store_true", default=False, help="use local parquest")
     parser.add_argument("--frozen_video", action="store_true", default=False, help="frozen video")
-    parser.add_argument("--max_new_tokens", type=int, default=20, help="max new tokens")
+    parser.add_argument("--max_new_tokens", type=int, default=10, help="max new tokens")
     return parser.parse_args()
 
