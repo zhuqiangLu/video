@@ -119,8 +119,8 @@ def get_frames_by_indices_pyav(video_path, max_num_frames):
             # print(type(frame.to_image()))
         # if frame_i > max(indices):
         #     break
-    if len(result) != max_num_frames:
-        print(f'warning: trying to sample {max_num_frames} frames from {video_path}, but got {len(result)} frames')
+    # if len(result) != max_num_frames:
+    #     print(f'warning: trying to sample {max_num_frames} frames from {video_path}, but got {len(result)} frames')
     return result
 
 def get_frames(video_path, extra_video_paths, frozen_video=False, combine_type=None, shuffle_frame=False, max_num_frames=10):
