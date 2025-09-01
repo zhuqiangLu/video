@@ -1,6 +1,15 @@
 import json
 import re
-from decord import VideoReader, cpu
+try:
+    from decord import VideoReader, cpu
+except:
+    print("decord not installed")
+
+try:
+    import av
+except:
+    print("av not installed")
+
 from PIL import Image
 import random
 # from GQA_TEMPLATE import GQA_TEMPLATE
@@ -8,7 +17,7 @@ from tqdm import tqdm
 import os
 from dataloader import data_builder
 import torch
-
+import numpy as np
 
 GQA_TEMPLATE = """Answer the question: "[QUESTION]" according to the content of the video. Select the answer from :[OPTION]. Only output the corresponding letter of the option.
 """
@@ -48,13 +57,13 @@ def append_to_jsonl(file_path, data):
 
 
 
+def uniform_sample(l, n):
+    gap = len(l) / n
+    idxs = [int(i * gap + gap / 2) for i in range(n)]
+    return [l[i] for i in idxs]
 
-
-def encode_video(target_video_path, extra_video_paths, max_num_frames=10, combine_type='target_first'):
-    def uniform_sample(l, n):
-        gap = len(l) / n
-        idxs = [int(i * gap + gap / 2) for i in range(n)]
-        return [l[i] for i in idxs]
+def encode_video(target_video_path, extra_video_paths, max_num_frames=10, combine_type='target_first', backend='av'):
+    
     
     if combine_type == 'target_first':
         print(f'target_first with num video: {len(extra_video_paths)}')
@@ -73,19 +82,46 @@ def encode_video(target_video_path, extra_video_paths, max_num_frames=10, combin
     
     all_frames = []
     for video_path in video_paths:
+        if backend == 'decord':
+            vr = VideoReader(video_path, ctx=cpu(0))
+            print(vr)
+            sample_fps = round(vr.get_avg_fps() / 1)  # FPS
+            frame_idx = [i for i in range(0, len(vr), sample_fps)]
+            if len(frame_idx) > max_num_frames:
+                frame_idx = uniform_sample(frame_idx, max_num_frames)
+            frames = vr.get_batch(frame_idx).asnumpy()
+            frames = [Image.fromarray(v.astype('uint8')) for v in frames]
+            all_frames.extend(frames) 
+        elif backend == 'av':
+            frames = get_frames_by_indices_pyav(video_path, max_num_frames)
+            all_frames.extend(frames) 
 
-        vr = VideoReader(video_path, ctx=cpu(0))
-        sample_fps = round(vr.get_avg_fps() / 1)  # FPS
-        frame_idx = [i for i in range(0, len(vr), sample_fps)]
-        if len(frame_idx) > max_num_frames:
-            frame_idx = uniform_sample(frame_idx, max_num_frames)
-        frames = vr.get_batch(frame_idx).asnumpy()
-        frames = [Image.fromarray(v.astype('uint8')) for v in frames]
-        all_frames.extend(frames) 
 
-    all_frames = uniform_sample(all_frames, max_num_frames)
+
+    # all_frames = uniform_sample(all_frames, max_num_frames)
 
     return all_frames
+
+def get_frames_by_indices_pyav(video_path, max_num_frames):
+    container = av.open(video_path)
+    sample_fps = round(container.streams.video[0].average_rate / 1)  # FPS
+    num_frames = container.streams.video[0].frames
+    frame_idx = [i for i in range(0, num_frames, sample_fps)]
+    if len(frame_idx) > max_num_frames:
+        frame_idx = uniform_sample(frame_idx, max_num_frames)
+    # print(container.streams.video[0].average_rate, frame_idx, num_frames, video_path,)
+    # raise
+    stream = container.streams.video[0]
+    result = list()
+    for frame_i, frame in enumerate(container.decode(stream)):
+        if frame_i in frame_idx:
+            result.append(frame.to_image())
+            # print(type(frame.to_image()))
+        # if frame_i > max(indices):
+        #     break
+    if len(result) != max_num_frames:
+        print(f'warning: trying to sample {max_num_frames} frames from {video_path}, but got {len(result)} frames')
+    return result
 
 def get_frames(video_path, extra_video_paths, frozen_video=False, combine_type=None, shuffle_frame=False, max_num_frames=10):
     frames = encode_video(video_path, extra_video_paths, combine_type=combine_type, max_num_frames=max_num_frames,)
@@ -123,6 +159,7 @@ def run_experiment(
     add_extra_options=False,
     no_target_video=False,
     replace_correct_with_extra=False,
+    resume=False,
 ):
     model, processor = setup_model_func(model_base, device)
     
@@ -154,18 +191,32 @@ def run_experiment(
     log_path = f"{result_dir}/{model_base.replace('/', '-')}{opts}/{cur_id}.jsonl"
 
     # rm log_path 
-    if os.path.exists(log_path):
-        os.remove(log_path)
+    resume_idx = 0
+    if resume:
+        assert os.path.exists(log_path), "log_path does not exist" 
+        with open(log_path, 'r') as f:
+            for line in f:
+                resume_idx += 1
+        print(f"resume from {resume_idx}")
+    else:
+        if os.path.exists(log_path):
+            os.remove(log_path)
 
     
     pbar = tqdm(dataset)
     for idx, item in enumerate(pbar):
+        if idx < resume_idx:
+            continue
+
+        
     
 
         
         video_path = item['video_path']
         if no_target_video:
             video_path = item['extra_video_path'][0]
+
+        # print(f"processing {video_path}")
 
         # print('custom_question', custom_question, 'add_extra_options', add_extra_options, 'replace_correct_with_extra', replace_correct_with_extra)
 
@@ -243,6 +294,7 @@ def run_experiment(
     
 
         accs = []
+
   
 
         pred = inference(video_path,
@@ -300,14 +352,13 @@ def inference(video_path,
               custom_question=None,
               ):
    
-    
     frames = get_frames(video_path, extra_video_paths, frozen_video=frozen_video, combine_type=combine_type, shuffle_frame=shuffle_frame, max_num_frames=max_num_frames)
-    
     inputs = get_inputs_func(prompt, frames, processor, no_video=no_video)
 
    
     inputs = inputs.to(device)
     input_ids = inputs.input_ids
+
    
 
     with torch.no_grad():

@@ -48,4 +48,5 @@ if __name__=='__main__':
         replace_correct_with_extra=args.replace_correct_with_extra,
         max_num_frames=args.max_num_frames,
         max_new_tokens=args.max_new_tokens,
+        resume=args.resume,
     )
