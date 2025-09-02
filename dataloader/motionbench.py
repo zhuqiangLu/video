@@ -99,7 +99,10 @@ class MotionBenchDataset(Dataset):
             video_path = item['video_path']
         # print(video_path, self.video_root, item['video _path'])
         # raise
-        extra_video_paths = [os.path.join(self.video_root, p) for p in random.sample(os.listdir(self.video_root), self.num_extra_video)]
+        # extra_video_paths = [os.path.join(self.video_root, p) for p in random.sample(os.listdir(self.video_root), self.num_extra_video)]
+        extra_video_paths = random.sample(self.all_video_paths, self.num_extra_video)
+        # print(extra_video_paths)
+        # raise
         
         # for qa_item in qa:
             
