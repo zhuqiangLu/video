@@ -140,7 +140,7 @@ def get_frames(video_path, extra_video_paths, frozen_video=False, combine_type=N
 def run_experiment(
     # inference_func,
     get_inputs_func,
-    decode_func,
+    inference_func,
     dataset,
     model_base,
     setup_model_func,
@@ -299,7 +299,7 @@ def run_experiment(
 
         pred = inference(video_path,
                          get_inputs_func, 
-                         decode_func, 
+                         inference_func, 
                          prompt, 
                          model, 
                          processor, 
@@ -337,7 +337,7 @@ def run_experiment(
 
 def inference(video_path, 
               get_inputs_func,
-              decode_func,
+              inference_func,
               prompt, 
               model, 
               processor, 
@@ -356,23 +356,19 @@ def inference(video_path,
     inputs = get_inputs_func(prompt, frames, processor, no_video=no_video)
 
    
-    inputs = inputs.to(device)
-    input_ids = inputs.input_ids
-
-   
-
-    with torch.no_grad():
-        output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens, use_cache=True, )
 
 
-
-
-    if decode_func is None:
+    if inference_func is None:
+        inputs = inputs.to(device)
+        input_ids = inputs.input_ids
+        with torch.no_grad():
+            output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens, use_cache=True, )
         generated_ids = [output_ids[i][len(inputs.input_ids[i]):] for i in range(len(output_ids))]
         output_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)
         return output_text[0]
     else:
-        output_text = decode_func(output_ids, inputs, processor)
+        output_text = inference_func(model, processor, inputs, max_new_tokens=max_new_tokens, use_cache=True)
+
         return output_text
 
     

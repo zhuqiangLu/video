@@ -24,12 +24,12 @@ if __name__=='__main__':
     print(f"可用的 GPU 数量: {gpu_count}")
     assert gpu_count == num_gpus
     
-    setup_model_func, get_inputs_func, decode_func = modeling_funcs_builder.get_modeling_funcs(args.model_base)
+    setup_model_func, get_inputs_func, inference_func = modeling_funcs_builder.get_modeling_funcs(args.model_base)
 
 
     run_experiment(
         get_inputs_func=get_inputs_func,
-        decode_func=decode_func,
+        inference_func=inference_func,
         dataset=dataset, 
         setup_model_func=setup_model_func,
         model_base=args.model_base, 
