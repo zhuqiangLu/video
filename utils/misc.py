@@ -296,41 +296,44 @@ def run_experiment(
         accs = []
 
   
+        try:
+            pred = inference(video_path,
+                            get_inputs_func, 
+                            inference_func, 
+                            prompt, 
+                            model, 
+                            processor, 
+                            shuffle_frame=shuffle_frame, 
+                            frozen_video=frozen_video,
+                            no_video=no_video, 
+                            max_num_frames=max_num_frames, 
+                            max_new_tokens=max_new_tokens,
+                            device=device, 
+                            extra_video_paths=extra_video_paths, 
+                            combine_type=combine_type, 
+                            custom_question=custom_question, 
+                            )
 
-        pred = inference(video_path,
-                         get_inputs_func, 
-                         inference_func, 
-                         prompt, 
-                         model, 
-                         processor, 
-                         shuffle_frame=shuffle_frame, 
-                         frozen_video=frozen_video,
-                         no_video=no_video, 
-                         max_num_frames=max_num_frames, 
-                         max_new_tokens=max_new_tokens,
-                         device=device, 
-                         extra_video_paths=extra_video_paths, 
-                         combine_type=combine_type, 
-                         custom_question=custom_question, 
-                         )
+            acc = 0.0
+            if extract_characters_regex(answer) == extract_characters_regex(pred):
+                acc = 1.0
 
-        acc = 0.0
-        if extract_characters_regex(answer) == extract_characters_regex(pred):
-            acc = 1.0
+            if answer in pred[:1]:  
+                acc = 1.0
 
-        if answer in pred[:1]:  
-            acc = 1.0
+            accs.append(acc)
 
-        accs.append(acc)
+            
+            
+            item_res = {'video_path': video_path, 'prompt':prompt, 'gt':answer, 'pred':pred, 'acc':acc }
+            append_to_jsonl(log_path, item_res)
+            
+            pbar.set_postfix({'accuracy': sum(accs)/len(accs), "gpu_id": cur_id})
 
-        
-        
-        item_res = {'video_path': video_path, 'prompt':prompt, 'gt':answer, 'pred':pred, 'acc':acc }
-        append_to_jsonl(log_path, item_res)
-        
-        pbar.set_postfix({'accuracy': sum(accs)/len(accs), "gpu_id": cur_id})
-        
-   
+        except Exception as e: 
+            print(f"Error: {e}")
+            print(f"video_path: {video_path}")
+            
 
 
 

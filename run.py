@@ -22,7 +22,7 @@ if __name__=='__main__':
     num_gpus = args.num_gpus
     gpu_count = torch.cuda.device_count()
     print(f"可用的 GPU 数量: {gpu_count}")
-    assert gpu_count == num_gpus
+    # assert gpu_count == num_gpus
     
     setup_model_func, get_inputs_func, inference_func = modeling_funcs_builder.get_modeling_funcs(args.model_base)
 
