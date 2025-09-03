@@ -125,6 +125,16 @@ def get_frames_by_indices_pyav(video_path, max_num_frames):
 
 def get_frames(video_path, extra_video_paths, frozen_video=False, combine_type=None, shuffle_frame=False, max_num_frames=10):
     frames = encode_video(video_path, extra_video_paths, combine_type=combine_type, max_num_frames=max_num_frames,)
+    
+    if len(extra_video_paths) > 0:
+        # unify frame resolution 
+        max_width = max(frame.width for frame in frames)    
+        max_height = max(frame.height for frame in frames)
+        for idx, frame in enumerate(frames):
+            frames[idx] = frame.resize((max_width, max_height))
+
+
+
     if frozen_video:
         # Get a random frame and duplicate it
         random_frame = random.choice(frames)
