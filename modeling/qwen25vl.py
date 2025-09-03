@@ -9,7 +9,7 @@ from qwen_vl_utils import process_vision_info
 def dummy():
     pass
     
-def get_inputs_func(prompt, frames, processor, no_video=False):    
+def get_inputs_func(prompt, frames, processor, no_video=False, video_path=None, extra_video_paths=None):    
     content = list()
     if not no_video:
         

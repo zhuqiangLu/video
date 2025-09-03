@@ -100,7 +100,7 @@ def load_video(video_path, bound=None, input_size=448, max_num=1, num_segments=3
     pixel_values = torch.cat(pixel_values_list)
     return pixel_values, num_patches_list
     
-def get_inputs_func(prompt, frames, processor, no_video=False, input_size=448, max_num=1, num_segments=32):    
+def get_inputs_func(prompt, frames, processor, no_video=False, input_size=448, max_num=1, num_segments=32, video_path=None, extra_video_paths=None):    
     content = list()
 
     transform = build_transform(input_size=input_size)
