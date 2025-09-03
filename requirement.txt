@@ -8,3 +8,7 @@ flash-attn
 accelerate
 timm
 num2words
+av 
+openai
+google-genai
+opencv-python

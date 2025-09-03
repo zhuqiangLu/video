@@ -11,7 +11,7 @@ def dummy():
 
 
 
-def get_inputs_func(prompt, frames, processor, no_video=False):
+def get_inputs_func(prompt, frames, processor, no_video=False, video_path=None, extra_video_paths=None):
 
     content = list()
     content.append({"type": "text", "text": prompt})

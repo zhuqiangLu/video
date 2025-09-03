@@ -62,7 +62,7 @@ def uniform_sample(l, n):
     idxs = [int(i * gap + gap / 2) for i in range(n)]
     return [l[i] for i in idxs]
 
-def encode_video(target_video_path, extra_video_paths, max_num_frames=10, combine_type='target_first', backend='av'):
+def encode_video(target_video_path, extra_video_paths, max_num_frames=10, combine_type='target_first', backend='av', start_time=None, end_time=None):
     
     
     if combine_type == 'target_first':
@@ -93,7 +93,7 @@ def encode_video(target_video_path, extra_video_paths, max_num_frames=10, combin
             frames = [Image.fromarray(v.astype('uint8')) for v in frames]
             all_frames.extend(frames) 
         elif backend == 'av':
-            frames = get_frames_by_indices_pyav(video_path, max_num_frames)
+            frames = sample_frames(video_path, max_num_frames, start_time, end_time)
             all_frames.extend(frames) 
 
 
@@ -101,6 +101,61 @@ def encode_video(target_video_path, extra_video_paths, max_num_frames=10, combin
     # all_frames = uniform_sample(all_frames, max_num_frames)
 
     return all_frames
+
+
+def sample_frames(video_path, max_num_frames, start_time, end_time, ):
+    """
+    Sample frames between start_time and end_time at a given fps.
+    
+    Args:
+        video_path (str): Path to video.
+        start_time (float): Start time in seconds.
+        end_time (float): End time in seconds.
+        fps (float): Desired sampling fps.
+        
+    Returns:
+        List of (timestamp, frame_ndarray).
+    """
+    container = av.open(video_path)
+    video_stream = container.streams.video[0]
+
+    # Seek close to the start time (in pts units)
+    if start_time is not None:
+        container.seek(int(start_time / video_stream.time_base))
+        next_sample_time = start_time
+    else:
+        next_sample_time = 0 
+
+
+    frames = []
+
+    # sample_fps = round(container.streams.video[0].average_rate / 1)  # FPS
+    # step = 1.0 / fps  # interval between samples (seconds)
+    step = 1.0 # sample at 1 fps
+
+    for frame in container.decode(video_stream):
+        timestamp = frame.pts * video_stream.time_base
+
+        if start_time is not None and timestamp < start_time:
+            continue
+        if end_time is not None and timestamp > end_time:
+            break
+
+
+        if timestamp >= next_sample_time:
+            img = frame.to_image()
+            frames.append(img)
+            next_sample_time += step
+
+    duration = float(container.duration/ av.time_base)
+    container.close()
+    print(f'sample {len(frames)} frames from video with duration {duration:.2f}s from {video_path}, start_time {start_time}, end_time {end_time}')
+    if len(frames) > max_num_frames:
+        # Uniformly sample frames to reduce to max_num_frames
+        indices = list(range(len(frames)))
+        sample_indices = uniform_sample(indices, max_num_frames)
+        frames = [frames[i] for i in sample_indices]
+    return frames    
 
 def get_frames_by_indices_pyav(video_path, max_num_frames):
     container = av.open(video_path)
@@ -123,8 +178,8 @@ def get_frames_by_indices_pyav(video_path, max_num_frames):
     #     print(f'warning: trying to sample {max_num_frames} frames from {video_path}, but got {len(result)} frames')
     return result
 
-def get_frames(video_path, extra_video_paths, frozen_video=False, combine_type=None, shuffle_frame=False, max_num_frames=10):
-    frames = encode_video(video_path, extra_video_paths, combine_type=combine_type, max_num_frames=max_num_frames,)
+def get_frames(video_path, extra_video_paths, frozen_video=False, combine_type=None, shuffle_frame=False, max_num_frames=10, start_time=None, end_time=None):
+    frames = encode_video(video_path, extra_video_paths, combine_type=combine_type, max_num_frames=max_num_frames, start_time=start_time, end_time=end_time)
     
     if len(extra_video_paths) > 0:
         # unify frame resolution 
@@ -145,6 +200,9 @@ def get_frames(video_path, extra_video_paths, frozen_video=False, combine_type=N
         random.shuffle(frames)
         print("frame shuffled")
     return frames
+
+
+
 
 
 def run_experiment(
@@ -223,6 +281,8 @@ def run_experiment(
 
         
         video_path = item['video_path']
+        start_time = item['start_time'] if 'start_time' in item else None
+        end_time = item['end_time'] if 'end_time' in item else None
         if no_target_video:
             video_path = item['extra_video_path'][0]
 
@@ -289,7 +349,7 @@ def run_experiment(
         
         if add_extra_options:
             option_letter = chr(64 + len(options)) if len(options) <= 2 else chr(96 + len(options))
-            options = options + [f'{option_letter.upper()}. I am not sure']
+            options = options + [f'{option_letter.upper()}. I do not know']
             if no_target_video:
                 answer = option_letter.upper()
         
@@ -305,25 +365,24 @@ def run_experiment(
 
         accs = []
 
+        frames = get_frames(video_path, extra_video_paths, frozen_video=frozen_video, combine_type=combine_type, shuffle_frame=shuffle_frame, max_num_frames=max_num_frames, start_time=start_time, end_time=end_time)
+        inputs = get_inputs_func(prompt, frames, processor, no_video=no_video)
+
   
         try:
-            pred = inference(video_path,
-                            get_inputs_func, 
-                            inference_func, 
-                            prompt, 
-                            model, 
-                            processor, 
-                            shuffle_frame=shuffle_frame, 
-                            frozen_video=frozen_video,
-                            no_video=no_video, 
-                            max_num_frames=max_num_frames, 
-                            max_new_tokens=max_new_tokens,
-                            device=device, 
-                            extra_video_paths=extra_video_paths, 
-                            combine_type=combine_type, 
-                            custom_question=custom_question, 
-                            )
 
+            if inference_func is None:
+                inputs = inputs.to(device)
+                input_ids = inputs.input_ids
+                with torch.no_grad():
+                    output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens, use_cache=True, )
+                generated_ids = [output_ids[i][len(inputs.input_ids[i]):] for i in range(len(output_ids))]
+                pred = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)[0]
+
+            else:
+                pred = inference_func(model, processor, inputs, max_new_tokens=max_new_tokens, use_cache=True)
+
+           
             acc = 0.0
             if extract_characters_regex(answer) == extract_characters_regex(pred):
                 acc = 1.0
@@ -343,45 +402,12 @@ def run_experiment(
         except Exception as e: 
             print(f"Error: {e}")
             print(f"video_path: {video_path}")
+
+
             
 
 
 
-
-def inference(video_path, 
-              get_inputs_func,
-              inference_func,
-              prompt, 
-              model, 
-              processor, 
-              shuffle_frame=False, 
-              frozen_video=False,
-              no_video=False, 
-              max_num_frames=10, 
-              max_new_tokens=20, 
-              device="cuda:0", 
-              extra_video_paths=[], 
-              combine_type=None, 
-              custom_question=None,
-              ):
-   
-    frames = get_frames(video_path, extra_video_paths, frozen_video=frozen_video, combine_type=combine_type, shuffle_frame=shuffle_frame, max_num_frames=max_num_frames)
-    inputs = get_inputs_func(prompt, frames, processor, no_video=no_video)
-
-   
-
-
-    if inference_func is None:
-        inputs = inputs.to(device)
-        input_ids = inputs.input_ids
-        with torch.no_grad():
-            output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens, use_cache=True, )
-        generated_ids = [output_ids[i][len(inputs.input_ids[i]):] for i in range(len(output_ids))]
-        output_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)
-        return output_text[0]
-    else:
-        output_text = inference_func(model, processor, inputs, max_new_tokens=max_new_tokens, use_cache=True)
-
-        return output_text
+    
 
     
