@@ -112,6 +112,10 @@ class MotionBenchDataset(Dataset):
         start = item['start']
         end = item['end']
 
+        if start is not None:
+            print(start, end)
+            
+
         
         
         
@@ -125,7 +129,8 @@ class MotionBenchDataset(Dataset):
             'options': options,
             'answer': answer,
             'extra_video_path': extra_video_paths,
-            "start_end": (start, end),
+            "start_time": None,
+            "end_time": None,
             "extra_info": {"question_type": item['question_type'], "video_type": item['video_type'], "video_info": item['video_info']}
         }
 

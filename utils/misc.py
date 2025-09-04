@@ -354,10 +354,11 @@ def run_experiment(
     
 
         accs = []
+  
 
         frames = get_frames(video_path, extra_video_paths, frozen_video=frozen_video, combine_type=combine_type, shuffle_frame=shuffle_frame, max_num_frames=max_num_frames, start_time=start_time, end_time=end_time)
         inputs = get_inputs_func(prompt, frames, processor, no_video=no_video)
-
+        continue 
   
         try:
 
