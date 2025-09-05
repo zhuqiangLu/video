@@ -84,7 +84,6 @@ def encode_video(target_video_path, extra_video_paths, max_num_frames=10, combin
     for video_path in video_paths:
         if backend == 'decord':
             vr = VideoReader(video_path, ctx=cpu(0))
-            print(vr)
             sample_fps = round(vr.get_avg_fps() / 1)  # FPS
             frame_idx = [i for i in range(0, len(vr), sample_fps)]
             if len(frame_idx) > max_num_frames:
@@ -149,7 +148,7 @@ def sample_frames(video_path, max_num_frames, start_time, end_time, ):
 
     duration = float(container.duration/ av.time_base)
     container.close()
-    print(f'sample {len(frames)} frames from video with duration {duration:.2f}s from {video_path}, start_time {start_time}, end_time {end_time}')
+    # print(f'sample {len(frames)} frames from video with duration {duration:.2f}s from {video_path}, start_time {start_time}, end_time {end_time}')
     if len(frames) > max_num_frames:
         # Uniformly sample frames to reduce to max_num_frames
         indices = list(range(len(frames)))
@@ -178,8 +177,8 @@ def get_frames_by_indices_pyav(video_path, max_num_frames):
     #     print(f'warning: trying to sample {max_num_frames} frames from {video_path}, but got {len(result)} frames')
     return result
 
-def get_frames(video_path, extra_video_paths, frozen_video=False, combine_type=None, shuffle_frame=False, max_num_frames=10, start_time=None, end_time=None):
-    frames = encode_video(video_path, extra_video_paths, combine_type=combine_type, max_num_frames=max_num_frames, start_time=start_time, end_time=end_time)
+def get_frames(video_path, extra_video_paths, frozen_video=False, combine_type=None, shuffle_frame=False, max_num_frames=10, start_time=None, end_time=None, backend='decord'):
+    frames = encode_video(video_path, extra_video_paths, combine_type=combine_type, max_num_frames=max_num_frames, start_time=start_time, end_time=end_time, backend=backend)
     
     if len(extra_video_paths) > 0:
         # unify frame resolution 
@@ -228,6 +227,7 @@ def run_experiment(
     no_target_video=False,
     replace_correct_with_extra=False,
     resume=False,
+    backend='decord',
 ):
     model, processor = setup_model_func(model_base, device)
     
@@ -366,9 +366,8 @@ def run_experiment(
         accs = []
   
 
-        frames = get_frames(video_path, extra_video_paths, frozen_video=frozen_video, combine_type=combine_type, shuffle_frame=shuffle_frame, max_num_frames=max_num_frames, start_time=start_time, end_time=end_time)
+        frames = get_frames(video_path, extra_video_paths, frozen_video=frozen_video, combine_type=combine_type, shuffle_frame=shuffle_frame, max_num_frames=max_num_frames, start_time=start_time, end_time=end_time, backend=backend)
         inputs = get_inputs_func(prompt, frames, processor, no_video=no_video)
-        continue 
   
         try:
 

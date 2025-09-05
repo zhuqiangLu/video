@@ -87,8 +87,9 @@ MODEL_BASE=microsoft/Phi-3.5-vision-instruct
 # MODEL_BASE=HuggingFaceTB/SmolVLM2-2.2B-Instruct
 # MODEL_BASE=models/InternVL3_5-2B
 
-
+BACKEND=av
 LIMIT=1.0
+NUM_FRAMES=16
 # DEFAULT 
 for i in $(seq 0 $((NUM_GPUS-1)))
 do
@@ -101,9 +102,10 @@ do
         --batch_size 1 \
         --result_dir $RESULT_DIR \
         --num_gpus $NUM_GPUS \
-        --max_num_frames 16 \
+        --max_num_frames $NUM_FRAMES \
         --limit $LIMIT \
         --use_local_parquest \
+        --backend $BACKEND \
         --cur_gpu $i &
 done
 wait
@@ -120,10 +122,11 @@ do
         --batch_size 1 \
         --result_dir $RESULT_DIR \
         --num_gpus $NUM_GPUS \
-        --max_num_frames 16 \
+        --max_num_frames $NUM_FRAMES \
         --shuffle_frame \
         --limit $LIMIT \
         --use_local_parquest \
+        --backend $BACKEND \
         --cur_gpu $i &
 done
 wait
@@ -140,10 +143,11 @@ do
         --batch_size 1 \
         --result_dir $RESULT_DIR \
         --num_gpus $NUM_GPUS \
-        --max_num_frames 16 \
+        --max_num_frames $NUM_FRAMES \
         --shuffle_video \
         --limit $LIMIT \
         --use_local_parquest \
+        --backend $BACKEND \
         --cur_gpu $i &
 done
 wait
@@ -160,10 +164,11 @@ do
         --batch_size 1 \
         --result_dir $RESULT_DIR \
         --num_gpus $NUM_GPUS \
-        --max_num_frames 16 \
+        --max_num_frames $NUM_FRAMES \
         --frozen_video \
         --limit $LIMIT \
         --use_local_parquest \
+        --backend $BACKEND \
         --cur_gpu $i &
 done
 wait
@@ -180,99 +185,100 @@ do
         --batch_size 1 \
         --result_dir $RESULT_DIR \
         --num_gpus $NUM_GPUS \
-        --max_num_frames 16 \
+        --max_num_frames $NUM_FRAMES \
         --frozen_video \
         --custom_question "frozen_video_bool" \
         --limit $LIMIT \
         --use_local_parquest \
+        --backend $BACKEND \
         --cur_gpu $i &
 done
 wait
 
-# combine type: target_first
-for i in $(seq 0 $((NUM_GPUS-1)))
-do
-    python run.py \
-        --dataset_name $TASK \
-        --video_root  $VIDEO_ROOT \
-        --data_files $DATA_FILES \
-        --split test \
-        --model_base $MODEL_BASE \
-        --batch_size 1 \
-        --result_dir $RESULT_DIR \
-        --num_gpus $NUM_GPUS \
-        --max_num_frames 48 \
-        --combine_type "target_first" \
-        --num_extra_video 2 \
-        --limit $LIMIT \
-        --use_local_parquest \
-        --cur_gpu $i &
-done
+# # combine type: target_first
+# for i in $(seq 0 $((NUM_GPUS-1)))
+# do
+#     python run.py \
+#         --dataset_name $TASK \
+#         --video_root  $VIDEO_ROOT \
+#         --data_files $DATA_FILES \
+#         --split test \
+#         --model_base $MODEL_BASE \
+#         --batch_size 1 \
+#         --result_dir $RESULT_DIR \
+#         --num_gpus $NUM_GPUS \
+#         --max_num_frames $NUM_FRAMES \
+#         --combine_type "target_first" \
+#         --num_extra_video 2 \
+#         --limit $LIMIT \
+#         --use_local_parquest \
+#         --cur_gpu $i &
+# done
 wait
 
-# combine type: target_middle
-for i in $(seq 0 $((NUM_GPUS-1)))
-do
-    python run.py \
-        --dataset_name $TASK \
-        --video_root  $VIDEO_ROOT \
-        --data_files $DATA_FILES \
-        --split test \
-        --model_base $MODEL_BASE \
-        --batch_size 1 \
-        --result_dir $RESULT_DIR \
-        --num_gpus $NUM_GPUS \
-        --max_num_frames 48 \
-        --combine_type "target_middle" \
-        --num_extra_video 2 \
-        --limit $LIMIT \
-        --use_local_parquest \
-        --cur_gpu $i &
-done
-wait
+# # combine type: target_middle
+# for i in $(seq 0 $((NUM_GPUS-1)))
+# do
+#     python run.py \
+#         --dataset_name $TASK \
+#         --video_root  $VIDEO_ROOT \
+#         --data_files $DATA_FILES \
+#         --split test \
+#         --model_base $MODEL_BASE \
+#         --batch_size 1 \
+#         --result_dir $RESULT_DIR \
+#         --num_gpus $NUM_GPUS \
+#         --max_num_frames $NUM_FRAMES \
+#         --combine_type "target_middle" \
+#         --num_extra_video 2 \
+#         --limit $LIMIT \
+#         --use_local_parquest \
+#         --cur_gpu $i &
+# done
+# wait
 
-# combine type: target_last
-for i in $(seq 0 $((NUM_GPUS-1)))
-do
-    python run.py \
-        --dataset_name $TASK \
-        --video_root  $VIDEO_ROOT \
-        --data_files $DATA_FILES \
-        --split test \
-        --model_base $MODEL_BASE \
-        --batch_size 1 \
-        --result_dir $RESULT_DIR \
-        --num_gpus $NUM_GPUS \
-        --max_num_frames 48 \
-        --combine_type "target_last" \
-        --num_extra_video 2 \
-        --limit $LIMIT \
-        --use_local_parquest \
-        --cur_gpu $i &
-done
-wait
+# # combine type: target_last
+# for i in $(seq 0 $((NUM_GPUS-1)))
+# do
+#     python run.py \
+#         --dataset_name $TASK \
+#         --video_root  $VIDEO_ROOT \
+#         --data_files $DATA_FILES \
+#         --split test \
+#         --model_base $MODEL_BASE \
+#         --batch_size 1 \
+#         --result_dir $RESULT_DIR \
+#         --num_gpus $NUM_GPUS \
+#         --max_num_frames $NUM_FRAMES \
+#         --combine_type "target_last" \
+#         --num_extra_video 2 \
+#         --limit $LIMIT \
+#         --use_local_parquest \
+#         --cur_gpu $i &
+# done
+# wait
 
-# combine type: target_middle + custom question: video_number
-for i in $(seq 0 $((NUM_GPUS-1)))
-do
-    python run.py \
-        --dataset_name $TASK \
-        --video_root  $VIDEO_ROOT \
-        --data_files $DATA_FILES \
-        --split test \
-        --model_base $MODEL_BASE \
-        --batch_size 1 \
-        --result_dir $RESULT_DIR \
-        --num_gpus $NUM_GPUS \
-        --max_num_frames 48 \
-        --combine_type "target_middle" \
-        --custom_question "video_number" \
-        --num_extra_video 2 \
-        --limit $LIMIT \
-        --use_local_parquest \
-        --cur_gpu $i &
-done
-wait
+# # combine type: target_middle + custom question: video_number
+# for i in $(seq 0 $((NUM_GPUS-1)))
+# do
+#     python run.py \
+#         --dataset_name $TASK \
+#         --video_root  $VIDEO_ROOT \
+#         --data_files $DATA_FILES \
+#         --split test \
+#         --model_base $MODEL_BASE \
+#         --batch_size 1 \
+#         --result_dir $RESULT_DIR \
+#         --num_gpus $NUM_GPUS \
+#         --max_num_frames $NUM_FRAMES \
+#         --combine_type "target_middle" \
+#         --custom_question "video_number" \
+#         --num_extra_video 2 \
+#         --limit $LIMIT \
+#         --use_local_parquest \
+#         --cur_gpu $i &
+# done
+# wait
 
 # custom question: count_frame
 for i in $(seq 0 $((NUM_GPUS-1)))
@@ -286,11 +292,12 @@ do
         --batch_size 1 \
         --result_dir $RESULT_DIR \
         --num_gpus $NUM_GPUS \
-        --max_num_frames 16 \
+        --max_num_frames $NUM_FRAMES \
         --custom_question "count_frame" \
         --num_extra_video 2 \
         --limit $LIMIT \
         --use_local_parquest \
+        --backend $BACKEND \
         --cur_gpu $i &
 done
 wait
@@ -308,10 +315,11 @@ do
         --batch_size 1 \
         --result_dir $RESULT_DIR \
         --num_gpus $NUM_GPUS \
-        --max_num_frames 16 \
+        --max_num_frames $NUM_FRAMES \
         --replace_correct_with_extra \
         --limit $LIMIT \
         --use_local_parquest \
+        --backend $BACKEND \
         --cur_gpu $i &
 done
 wait
@@ -329,10 +337,11 @@ do
         --batch_size 1 \
         --result_dir $RESULT_DIR \
         --num_gpus $NUM_GPUS \
-        --max_num_frames 16 \
+        --max_num_frames $NUM_FRAMES \
         --add_extra_options \
         --limit $LIMIT \
         --use_local_parquest \
+        --backend $BACKEND \
         --cur_gpu $i &
 done
 wait

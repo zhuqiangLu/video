@@ -26,5 +26,7 @@ def get_args():
     parser.add_argument("--frozen_video", action="store_true", default=False, help="frozen video")
     parser.add_argument("--max_new_tokens", type=int, default=10, help="max new tokens")
     parser.add_argument("--resume", action="store_true", default=False, help="resume")
+    parser.add_argument("--backend", type=str, default="decord", help="video decoding backend")
+
     return parser.parse_args()
 
