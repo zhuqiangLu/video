@@ -2,14 +2,14 @@ import os
 import json
 from torch.utils.data import Dataset
 import random
-from .utils import split_data
+from .utils import split_data, sample_frames
 from pprint import pprint
 from .builder import register
 
 
 @register("MotionBench")
 class MotionBenchDataset(Dataset):
-    def __init__(self, dataset_path, dataset_name=None, data_files=None, shuffle_video=False, num_gpus=1, cur_gpu=0, limit=None, num_extra_video=0, use_local_parquest=False, **kwargs):
+    def __init__(self, dataset_path, dataset_name=None, data_files=None, shuffle_video=False, num_gpus=1, cur_gpu=0, limit=None, num_extra_video=0, use_local_parquest=False, backend='decord', max_num_frames=10):
 
         print('WARNING: MotionBenchDataset will ignore argment: dataset_name, but instead uses the video_info.meta.jsonl')
         # self.dataset = load_dataset(dataset_name, split='test')
@@ -25,7 +25,8 @@ class MotionBenchDataset(Dataset):
         self.num_extra_video = num_extra_video
         self.dataset = split_data(self.dataset, num_gpus, limit)[cur_gpu]
         self.num_extra_video = num_extra_video
-
+        self.backend = backend
+        self.max_num_frames = max_num_frames
         self.all_video_paths = [item['video_path'] for item in self.dataset]
         
         # if limit is not None:
@@ -103,34 +104,33 @@ class MotionBenchDataset(Dataset):
         extra_video_paths = random.sample(self.all_video_paths, self.num_extra_video)
         # print(extra_video_paths)
         # raise
-        
+        frames = sample_frames(video_path, max_num_frames=self.max_num_frames, backend=self.backend)
+        extra_frames = list() 
+        for extra_video_path in extra_video_paths:
+            extra_frames.append(sample_frames(extra_video_path, max_num_frames=self.max_num_frames, backend=self.backend))
         # for qa_item in qa:
+
+
+
             
         question = item['question']
         options = item['options']
         answer = item['answer']
-        start = item['start']
-        end = item['end']
+       
 
-        if start is not None:
-            print(start, end)
-            
-
-        
-        
         
         
 
         
 
         data_item = {
+            'frames': frames,
+            'extra_frames': extra_frames,
             'video_path': video_path,       
             'question': question,
             'options': options,
             'answer': answer,
             'extra_video_path': extra_video_paths,
-            "start_time": None,
-            "end_time": None,
             "extra_info": {"question_type": item['question_type'], "video_type": item['video_type'], "video_info": item['video_info']}
         }
 

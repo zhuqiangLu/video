@@ -9,16 +9,13 @@ from qwen_vl_utils import process_vision_info
 def dummy():
     pass
     
-def get_inputs_func(prompt, frames, processor, no_video=False, video_path=None, extra_video_paths=None):    
+def get_inputs_func(prompt, frames, processor):    
     content = list()
-    if not no_video:
         
-        content.append(
-            {"type": "video", "video": frames,}
-        )
-    else:
-        print('no video')
-
+    content.append(
+        {"type": "video", "video": frames,}
+    )
+    
         
     content.append(
         {"type": "text", "text": prompt}

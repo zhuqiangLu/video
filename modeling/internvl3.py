@@ -100,22 +100,22 @@ def load_video(video_path, bound=None, input_size=448, max_num=1, num_segments=3
     pixel_values = torch.cat(pixel_values_list)
     return pixel_values, num_patches_list
     
-def get_inputs_func(prompt, frames, processor, no_video=False, input_size=448, max_num=1, num_segments=32, video_path=None, extra_video_paths=None):    
+def get_inputs_func(prompt, frames, processor, input_size=448, max_num=1, num_segments=32):    
     content = list()
 
     transform = build_transform(input_size=input_size)
-    if not no_video:
     
-        pixel_values_list, num_patches_list = [], []
-        for frame in frames:
-            img = dynamic_preprocess(frame, image_size=input_size, use_thumbnail=True, max_num=max_num)
-            pixel_values = [transform(tile) for tile in img]
-            pixel_values = torch.stack(pixel_values)
-            num_patches_list.append(pixel_values.shape[0])
-            pixel_values_list.append(pixel_values)
-        pixel_values = torch.cat(pixel_values_list)
-        pixel_values = pixel_values.to(torch.bfloat16)
-        video_prefix = ''.join([f'Frame{i+1}: <image>\n' for i in range(len(num_patches_list))])
+    
+    pixel_values_list, num_patches_list = [], []
+    for frame in frames:
+        img = dynamic_preprocess(frame, image_size=input_size, use_thumbnail=True, max_num=max_num)
+        pixel_values = [transform(tile) for tile in img]
+        pixel_values = torch.stack(pixel_values)
+        num_patches_list.append(pixel_values.shape[0])
+        pixel_values_list.append(pixel_values)
+    pixel_values = torch.cat(pixel_values_list)
+    pixel_values = pixel_values.to(torch.bfloat16)
+    video_prefix = ''.join([f'Frame{i+1}: <image>\n' for i in range(len(num_patches_list))])
 
     mesg = video_prefix + prompt 
 

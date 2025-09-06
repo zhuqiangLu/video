@@ -2,27 +2,29 @@ import os
 from datasets import load_dataset
 from torch.utils.data import Dataset
 import random
-from .utils import split_data, sample_frames
+from .utils import split_data
 from .builder import register
 
 
-@register("Video-MME")
-class VideoMMEDataset(Dataset):
-    def __init__(self, video_root, dataset_name='lmms-lab/Video-MME', data_files=None, shuffle_video=False, num_gpus=1, cur_gpu=0, limit=None, num_extra_video=0, use_local_parquest=False, backend='decord', max_num_frames=10):
+@register("MVBench")
+class MVBenchDataset(Dataset):
+    def __init__(self, video_root, dataset_name='lmms-lab/MVBench', data_files=None, shuffle_video=False, num_gpus=1, cur_gpu=0, limit=None, num_extra_video=0, use_local_parquest=False):
         # print(f"Loading dataset from {data_files}")
-        if use_local_parquest:
-            self.dataset = load_dataset("parquet", split='test', data_files={'test': data_files})
-          
-        else:
-            self.dataset = load_dataset(dataset_name, split='test', data_files={'test': data_files})
+        assert use_local_parquest, 'mvbench only support local files'
+        self.dataset = dict()
+        for file in os.listdir(data_files):
+            self.dataset[file.replace('.json', '')] = load_dataset("json", split='test', data_files={'test': os.path.join(data_files, file)})
+            # self.dataset = load_dataset("json", split='test', data_files={'test': os.path.join(data_files, file)})
+    
+        print(self.dataset)
+        raise
         
         self.video_root = os.path.join(video_root)
         self.shuffle_video = shuffle_video
         self.video_list = os.listdir(self.video_root)
         self.dataset = split_data(self.dataset, num_gpus, limit)[cur_gpu]
         self.num_extra_video = num_extra_video
-        self.backend = backend
-        self.max_num_frames = max_num_frames
+        
         
 
 
@@ -43,15 +45,9 @@ class VideoMMEDataset(Dataset):
 
         extra_video_paths = [os.path.join(self.video_root, p) for p in random.sample(os.listdir(self.video_root), self.num_extra_video)]
 
-        frames = sample_frames(video_path, max_num_frames=self.max_num_frames, backend=self.backend)
-        extra_frames = list() 
-        for extra_video_path in extra_video_paths:
-            extra_frames.append(sample_frames(extra_video_path, max_num_frames=self.max_num_frames, backend=self.backend))
 
         item = self.dataset[idx]
         data_item = {
-            'frames': frames,
-            'extra_frames': extra_frames,
             'video_path': video_path,       
             'question': item['question'],
             'options': item['options'],

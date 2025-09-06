@@ -10,14 +10,11 @@ def dummy():
 
 
 
-def get_inputs_func(prompt, frames, processor, no_video=False, video_path=None, extra_video_paths=None):
+def get_inputs_func(prompt, frames, processor):
 
     placeholder = "" 
-    if not no_video:
-        for idx, _ in enumerate(frames):
-            placeholder += f"<|image_{idx+1}|>\n"
-    else:
-        print('no video')
+    for idx, _ in enumerate(frames):
+        placeholder += f"<|image_{idx+1}|>\n"
     content = placeholder+prompt
     messages = [
         {"role": "user", "content": content},

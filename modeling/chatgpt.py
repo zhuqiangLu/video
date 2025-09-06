@@ -55,14 +55,11 @@ def PIL_to_base64(img):
     img_base64 = base64.b64encode(img_bytes).decode("utf-8")
     return img_base64
 
-def get_inputs_func(prompt, frames, processor, no_video=False, video_path=None, extra_video_paths=None):
+def get_inputs_func(prompt, frames, processor):
     base64Frames = list()
     # Convert to Base64
 
-    
-
-    if not no_video:
-        base64Frames = [PIL_to_base64(frame) for frame in frames]
+    base64Frames = [PIL_to_base64(frame) for frame in frames]
 
     ret = dict()
     ret['prompt'] = prompt

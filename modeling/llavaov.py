@@ -11,20 +11,19 @@ def dummy():
 
 
 
-def get_inputs_func(prompt, frames, processor, no_video=False, video_path=None, extra_video_paths=None):
+def get_inputs_func(prompt, frames, processor, ):
 
     content = list()
     content.append({"type": "text", "text": prompt})
 
     
 
-    if not no_video:
-        # we use dummy video to get video placeholder 
-        # content.append({"type": "video", "path": "./asset/test.mp4"})
-        for _ in frames:
-            content.append({"type": "image"})
-    else:
-        print("no video")
+    
+    # we use dummy video to get video placeholder 
+    # content.append({"type": "video", "path": "./asset/test.mp4"})
+    for _ in frames:
+        content.append({"type": "image"})
+    
     messages = [
         {"role": "user", "content": content},
     ]

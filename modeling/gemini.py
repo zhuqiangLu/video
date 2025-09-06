@@ -82,14 +82,14 @@ def pil_images_to_video_bytes(pil_images, fps=1, size=None, fourcc="mp4v"):
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-def get_inputs_func(prompt, frames, processor, no_video=False):
+def get_inputs_func(prompt, frames, processor):
 
     
     # Convert to Base64
 
     
     video_bytes = None
-    if not no_video:
+    if len(frames) > 0:
         video_bytes = pil_images_to_video_bytes(frames)
         # video_bytes = open('asset/test.mp4', 'rb').read()
 

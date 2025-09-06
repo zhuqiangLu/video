@@ -7,18 +7,16 @@ import torch
 def dummy():
     pass
 
-def get_inputs_func(prompt, frames, processor,  no_video=False, video_path=None, extra_video_paths=None):
+def get_inputs_func(prompt, frames, processor):
 
     content = list()
     content.append({"type": "text", "text": prompt})
 
     
 
-    if not no_video:
-        for image in frames:
-            content.append({"type": "image", "image": image})
-    else:
-        print('no video')
+    for image in frames:
+        content.append({"type": "image", "image": image})
+    
     messages = [
         {"role": "user", "content": content},
     ]

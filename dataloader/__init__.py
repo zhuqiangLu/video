@@ -1,6 +1,7 @@
 from .videomme import VideoMMEDataset
 from .videoevalpro import VideoEvalProDataset
 from .motionbench import MotionBenchDataset
+from .mvbench import MVBenchDataset
 from .builder import data_builder
 # __all__ = ['VideoMMEDataset', 'VideoEvalProDataset', 'MotionBenchDataset']
 

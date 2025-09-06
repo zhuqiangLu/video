@@ -27,6 +27,8 @@ def get_args():
     parser.add_argument("--max_new_tokens", type=int, default=10, help="max new tokens")
     parser.add_argument("--resume", action="store_true", default=False, help="resume")
     parser.add_argument("--backend", type=str, default="decord", help="video decoding backend")
+    parser.add_argument("--debug", action="store_true", default=False, help="debug")
+    
 
     return parser.parse_args()
 
