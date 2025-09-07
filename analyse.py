@@ -7,9 +7,13 @@ import argparse
 from collections import defaultdict
 from pprint import pprint
 from tqdm import tqdm
+from utils.misc import extract_characters_regex
+from tabulate import tabulate
+
 args = argparse.ArgumentParser()
 args.add_argument('--result_dir', type=str, required=True)
 args.add_argument('--include', type=str, default="", required=False)
+args.add_argument('--save_report', default=False, action='store_true',  required=False)
 args = args.parse_args()
 
 
@@ -30,24 +34,64 @@ def group_jsonls(jsonl_dir):
                 tmp_dict[key] = item 
 
     return tmp_dict
+
+def parse_config(setting_path):
+    with open(setting_path, 'r') as f:
+        config = json.load(f)
+    return config 
                 
 def consistency(jsonl1, jsonl2):
+    # make sure jsonl1 is the base exp
+    consistency_report = list()
     consistency_pair = list()
     hit_rate = 0
     for key, item in jsonl1.items():
         if key in jsonl2:
             hit_rate += 1
             consistency_pair.append((item['pred'], jsonl2[key]['pred']))
+            consistency_report.append(
+                {
+                    'videopath': item['video_path'],
+                    'pred_base': item['pred'],
+                    'pred_exp': jsonl2[key]['pred'],
+                    'prompt': item['prompt'],
+                    'gt': item['gt'],
+                }
+            )
 
     cs = 0.
     for cp in consistency_pair:
-        if cp[0] == cp[1]:
+        pred1, pred2 = cp[0], cp[1]
+        pred1 = extract_characters_regex(pred1)
+        pred2 = extract_characters_regex(pred2)
+        # print(cp[0], cp[1])
+        # print(pred1, pred2)
+        # raise
+        if pred1 == pred2:
             cs += 1
         
     cs_score = cs / len(consistency_pair) if len(consistency_pair) > 0 else 0.
     hit_rate /= len(jsonl1)
-    return cs_score, hit_rate
+    return cs_score, hit_rate, consistency_report
 
+def build_table(settings):
+    settings = settings.split('|')[1:] 
+    table = defaultdict(list)
+    for s in settings:
+        if ":" not in s:
+            table["frame_setting"].append(s) 
+        else:
+            key, value = s.split(":")
+            table[key].append(value)
+
+    header = list()
+    data = list()
+    for k, v in table.items(): 
+        data.append([ "|".join(v)])
+        header.append(k)
+    return header, data
+
+    
 
 
 if __name__ == '__main__':
@@ -64,7 +108,7 @@ if __name__ == '__main__':
     all_base_model = defaultdict(list)
     all_exp_name = list(all_exp.keys())
     for exp_name in all_exp_name:
-        base_model_name = exp_name.split('_')[0]
+        base_model_name = exp_name.split('|')[0]
         all_base_model[base_model_name].append(exp_name)
 
 
@@ -74,22 +118,31 @@ if __name__ == '__main__':
             if base_model != exp_setting:
                 base_json_dir = os.path.join(args.result_dir, base_model)
                 setting_json_dir = os.path.join(args.result_dir, exp_setting)
+                base_config = parse_config(os.path.join(base_json_dir, 'config.json'))
+                
                 base_json_dict = group_jsonls(base_json_dir)
                 setting_json_dict = group_jsonls(setting_json_dir)
+               
+                headers, data = build_table(exp_setting, ) 
+                cs, hit_rate, consistency_report = consistency(base_json_dict, setting_json_dict)
+                headers.append('# items (base|exp)')
+                data[0].append([f"{len(base_json_dict)}|{len(setting_json_dict)}"])
+                headers.append('# acc (base|exp)')
+                data[0].append([f"{acc(base_json_dict):.4f}|{acc(setting_json_dict):.4f}"])
+                headers.append('# consistency')
+                data[0].append([f"{cs:.4f}"])
+                headers.append('# hit rate')
+                data[0].append([f"{hit_rate:.4f}"])
+                print(tabulate(data, headers=headers, tablefmt="grid"), )
+                if args.save_report:
+                    print(f'saving report to {os.path.join(args.result_dir, f"{base_model}_vs_{exp_setting}.json")}')
+                    with open(os.path.join(args.result_dir, f'{base_model}_vs_{exp_setting}.json'), 'w') as f:
+                        json.dump(consistency_report, f, indent=4)
 
-                print(f'{base_model} has {len(base_json_dict)} items and {exp_setting} has {len(setting_json_dict)} items')
-                cs, hit_rate = consistency(base_json_dict, setting_json_dict)
-                print(f'{base_model} {acc(base_json_dict)} -> {exp_setting} {acc(setting_json_dict)}: {cs} {hit_rate}')
-                print('-'*100)
+
+
+
+
+                print('#'*100)
                 
                 
-
-    # find the max num frames
-    
-    # acc = list()
-    # for jonsl in all_jonsl:
-    #     with open(jonsl, 'r') as f:
-    #         for line in f:
-    #             item = json.loads(line)
-    #             acc.append(item['acc']) 
-    # print(np.mean(acc))    
