@@ -95,7 +95,7 @@ class MotionBenchDataset(Dataset):
         if self.shuffle_video:
             print('shuffle video')
             video_path = random.choice(self.all_video_paths)
-            video_path = os.path.join(self.video_root, video_path)
+            # video_path = os.path.join(self.video_root, video_path)
         else:
             video_path = item['video_path']
         # print(video_path, self.video_root, item['video _path'])

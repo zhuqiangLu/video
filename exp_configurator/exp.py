@@ -241,7 +241,16 @@ class shuffle_video(exp):
         return question, options, answer, frames, extra_frames
 
 
-
+class reverse_video(exp):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.enabled = kwargs.get('reverse_video', False)
+        self.opts = f"|reverse_video" if self.enabled else ""
+        
+    def process(self, question, options, answer, frames, extra_frames):
+        frames = frames[::-1]
+        extra_frames = [item[::-1] for item in extra_frames]
+        return question, options, answer, frames, extra_frames
 
 all_exp = [
     video_position,
@@ -253,6 +262,7 @@ all_exp = [
     shuffle_frame,
     frozen_video,
     shuffle_video,
+    reverse_video,
     no_target_video,
     no_video,
     combine_frame, #combine frame must be the last one
