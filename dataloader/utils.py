@@ -44,7 +44,7 @@ def uniform_sample(l, n):
 def sample_frames(video_path, max_num_frames, start_time=None, end_time=None, backend='decord'):
     # print(backend)
     if backend == 'decord':
-        frames = sample_frames_decord(video_paths, max_num_frames, start_time, end_time)
+        frames = sample_frames_decord(video_path, max_num_frames, start_time, end_time)
         
     elif backend == 'av':
         frames = sample_frames_pyav(video_path, max_num_frames, start_time, end_time)
