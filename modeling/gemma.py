@@ -22,6 +22,8 @@ def get_inputs_func(prompt, frames, processor):
     ]
 
     text = processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    if len(frames) == 0:
+        frames = None
     inputs = processor(text=text, images=frames, padding=True, return_tensors="pt")
 
 

@@ -113,9 +113,14 @@ def get_inputs_func(prompt, frames, processor, input_size=448, max_num=1, num_se
         pixel_values = torch.stack(pixel_values)
         num_patches_list.append(pixel_values.shape[0])
         pixel_values_list.append(pixel_values)
-    pixel_values = torch.cat(pixel_values_list)
-    pixel_values = pixel_values.to(torch.bfloat16)
-    video_prefix = ''.join([f'Frame{i+1}: <image>\n' for i in range(len(num_patches_list))])
+    if len(frames) > 0:
+        pixel_values = torch.cat(pixel_values_list)
+        pixel_values = pixel_values.to(torch.bfloat16)
+        video_prefix = ''.join([f'Frame{i+1}: <image>\n' for i in range(len(num_patches_list))])
+    else:
+        video_prefix = ''
+        pixel_values = None
+   
 
     mesg = video_prefix + prompt 
 
@@ -149,9 +154,10 @@ def setup_model(model_base, device, text_only_model=False):
 
 def inference_func(model, tokenizer, inputs, max_new_tokens=20, use_cache=True):
     question = inputs['question']
-    pixel_values = inputs['pixel_values'].to(model.device)
+    pixel_values = inputs['pixel_values'].to(model.device) if inputs['pixel_values'] is not None else None
     num_patches_list = inputs['num_patches_list']
     generation_config = dict(max_new_tokens=max_new_tokens, do_sample=False)
+    
     with torch.no_grad():
         response = model.chat(tokenizer, pixel_values, question, generation_config,
                                 num_patches_list=num_patches_list, history=None, return_history=False)

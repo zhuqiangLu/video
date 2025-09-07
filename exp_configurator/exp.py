@@ -86,7 +86,7 @@ class count_frame(exp):
         return question, options, answer, frames, extra_frames
 
 
-class frozen_vieo_bool(exp):
+class frozen_video_bool(exp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.enabled = kwargs.get('custom_question', "") == 'frozen_video_bool'
@@ -139,15 +139,19 @@ Frame related
 class combine_frame(exp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.enabled = kwargs.get('combine_type', None) is not None
+        self.enabled = True
+        if kwargs.get('combine_type', None) is not None:
+            assert kwargs.get('num_extra_video', 0) > 0, "num_extra_video must be greater than 0 when combine_type is not None"
         self.combine_type = kwargs.get('combine_type', None)
-        self.opts = f"|combine_frame:{self.combine_type}" if self.enabled else ""
+        self.opts = f"|combine_frame:{self.combine_type}" if kwargs.get('combine_type', None) is not None else ""
+        self.opts += f"|num_extra_video:{kwargs.get('num_extra_video', 0)}" if kwargs.get('num_extra_video', 0) > 0 else ""
 
     def process(self, question, options, answer, frames, extra_frames):
         assert type(extra_frames) == list, "extra_frames must be a list"
         assert type(frames) == list, "frames must be a list"
 
-        if self.combine_type == 'target_first' or self.combine_type == None:
+
+        if self.combine_type == 'target_first' or self.combine_type is None:
             extra_frames.insert(0, frames)
         elif self.combine_type == 'target_last':
             extra_frames.insert(len(extra_frames)+1, frames)
@@ -157,13 +161,14 @@ class combine_frame(exp):
         else:
             raise ValueError(f"Invalid combine_type: {self.combine_type}")
 
-        all_frames =list() 
+        all_frames = list() 
+       
         for item in extra_frames:
             all_frames.extend(item) 
 
         # finally we unify the frame resolution 
         if len(all_frames) > 0:
-            frame_res = frames[0].size
+            frame_res = all_frames[0].size
             for idx, frame in enumerate(all_frames):
                 all_frames[idx] = frame.resize(frame_res)
 
@@ -179,18 +184,18 @@ class shuffle_frame(exp):
         assert type(frames) == list, "frames must be a list"
         assert type(extra_frames) == list, "extra_frames must be a list"
 
-        if self.shuffle_frame:
+        if self.enabled:
             random.shuffle(frames)
         for item in extra_frames:
             random.shuffle(item)
 
         return question, options, answer, frames, extra_frames
 
-class freeze_frame(exp):
+class frozen_video(exp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.enabled = kwargs.get('freeze_frame', False)
-        self.opts = f"|freeze_frame" if self.enabled else ""
+        self.enabled = kwargs.get('frozen_video', False)
+        self.opts = f"|frozen_video" if self.enabled else ""
 
     def process(self, question, options, answer, frames, extra_frames):
         assert type(frames) == list, "frames must be a list"
@@ -232,11 +237,12 @@ all_exp = [
     video_position,
     video_number,
     count_frame,
-    frozen_vieo_bool,
+    frozen_video_bool,
     replace_correct_with_extra,
     add_extra_options,
     shuffle_frame,
-    freeze_frame,
+    frozen_video,
+    no_target_video,
     no_video,
     combine_frame, #combine frame must be the last one
 ]

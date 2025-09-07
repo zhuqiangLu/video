@@ -19,7 +19,8 @@ def get_inputs_func(prompt, frames, processor):
     
 
     # we use dummy video to get video placeholder 
-    content.append({"type": "video", "path": "./asset/test.mp4"})
+    if len(frames) > 0:
+        content.append({"type": "video", "path": "./asset/test.mp4"})
     
     messages = [
         {"role": "user", "content": content},
@@ -35,15 +36,10 @@ def get_inputs_func(prompt, frames, processor):
         num_frames=len(frames),
     ).to(dtype=torch.bfloat16)
     
+    if len(frames) > 0:
+        inputs.pixel_values = processor.video_processor(frames, return_tensors="pt").pixel_values.to(dtype=torch.bfloat16)
    
-    inputs.pixel_values = processor.video_processor(frames, return_tensors="pt").pixel_values.to(dtype=torch.bfloat16)
-    # pixel_values_test = torch.cat(pixel_values_test, dim=0).to(dtype=torch.bfloat16)
-
-
-    # print(inputs.input_ids.shape, inputs.pixel_values.shape, pixel_values_test.shape)
-    # raise
-
-
+  
     return inputs
 
 

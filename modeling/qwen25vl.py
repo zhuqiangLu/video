@@ -11,10 +11,10 @@ def dummy():
     
 def get_inputs_func(prompt, frames, processor):    
     content = list()
-        
-    content.append(
-        {"type": "video", "video": frames,}
-    )
+    if len(frames) > 0:
+        content.append(
+            {"type": "video", "video": frames,}
+        )
     
         
     content.append(
@@ -28,7 +28,8 @@ def get_inputs_func(prompt, frames, processor):
     text = processor.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
     )
-    image_inputs, video_inputs = process_vision_info(messages)
+    image_inputs, video_inputs = process_vision_info([[messages]])
+    
     inputs = processor(
         text=[text],
         images=image_inputs,
