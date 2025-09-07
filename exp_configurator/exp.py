@@ -119,7 +119,7 @@ class replace_correct_with_extra(exp):
 class add_extra_options(exp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.enabled = kwargs.get(add_extra_options, False) 
+        self.enabled = kwargs.get('add_extra_options', False) 
         assert not (kwargs.get('custom_question', False) and kwargs.get('replace_correct_with_extra', False)), "add_extra_options and replace_correct_with_extra cannot be True at the same time"
         self.no_target_video = kwargs.get('no_target_video', False)
         self.opts = f"|add_extra_options" if self.enabled else ""
@@ -231,6 +231,16 @@ class no_video(exp):
         return question, options, answer, [], []
 
 
+class shuffle_video(exp):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.enabled = kwargs.get('shuffle_video', False)
+        self.opts = f"|shuffle_video" if self.enabled else ""
+       
+    def process(self, question, options, answer, frames, extra_frames):
+        return question, options, answer, frames, extra_frames
+
+
 
 
 all_exp = [
@@ -242,6 +252,7 @@ all_exp = [
     add_extra_options,
     shuffle_frame,
     frozen_video,
+    shuffle_video,
     no_target_video,
     no_video,
     combine_frame, #combine frame must be the last one
