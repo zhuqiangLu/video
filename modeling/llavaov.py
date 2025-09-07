@@ -28,6 +28,8 @@ def get_inputs_func(prompt, frames, processor, ):
         {"role": "user", "content": content},
     ]
     prompt = processor.apply_chat_template(messages, add_generation_prompt=True)
+
+    frames = None if len(frames) == 0 else frames
     inputs = processor(images=frames, text=prompt, return_tensors='pt').to(torch.bfloat16)
     # print(inputs.keys())
     # raise
