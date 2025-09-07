@@ -9,7 +9,7 @@ try:
 except:
     print("av not installed")
 
-
+from PIL import Image
 
 def split_data(data, num_gpus, limit):
     is_dict = isinstance(data, dict)
