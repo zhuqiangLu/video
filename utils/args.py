@@ -14,6 +14,7 @@ def get_args():
     parser.add_argument("--no_video",  action="store_true", default=False, help="Not passing video to model")
     parser.add_argument("--shuffle_video", action="store_true", default=False, help="Shuffle video")
     parser.add_argument("--shuffle_frame", action="store_true", default=False, help="Shuffle frame")
+    parser.add_argument("--reverse_frame", action="store_true", default=False, help="Reverse frame")
     parser.add_argument("--limit", type=float, default=1,  help="dataset size")
     parser.add_argument("--combine_type", type=str, default=None, help="combine type", choices=["target_first", "target_first", "target_middle"])
     parser.add_argument("--custom_question", type=str, default=None, help="custom question", choices=["video_position", "video_number", "count_frame", 'frozen_video_bool'])

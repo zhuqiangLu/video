@@ -12,3 +12,4 @@ av
 openai
 google-genai
 opencv-python
+imageio
