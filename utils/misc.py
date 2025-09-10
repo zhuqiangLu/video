@@ -6,7 +6,7 @@ import random
 # from GQA_TEMPLATE import GQA_TEMPLATE
 from tqdm import tqdm 
 import os
-from dataloader import data_builder
+# from dataloader import data_builder
 import torch
 import numpy as np
 

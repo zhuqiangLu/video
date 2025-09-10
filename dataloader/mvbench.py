@@ -25,7 +25,7 @@ data_list = {
     "Action Sequence": ("action_sequence.json", "star/Charades_v1_480/", "video", True), # has start & end
     "Action Prediction": ("action_prediction.json", "star/Charades_v1_480/", "video", True), # has start & end
     "Action Antonym": ("action_antonym.json", "ssv2_video/", "video", False),
-    "Fine-grained Action": ("fine_grained_action.json", "pMoments_in_Time_Raw/videos/", "video", False),
+    "Fine-grained Action": ("fine_grained_action.json", "Moments_in_Time_Raw/videos/", "video", False),
     "Unexpected Action": ("unexpected_action.json", "FunQA_test/test/", "video", False),
     "Object Existence": ("object_existence.json", "clevrer/video_validation/", "video", False),
     "Object Interaction": ("object_interaction.json", "star/Charades_v1_480/", "video", True), # has start & end
