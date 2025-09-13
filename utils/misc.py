@@ -52,6 +52,15 @@ def append_to_jsonl(file_path, data):
 
 
 
+def defualt_inference_func(model, processor, inputs, max_new_tokens, use_cache, ppl=False, **ppl_kwargs):
+    inputs = inputs.to(model.device)
+    input_ids = inputs.input_ids
+    with torch.no_grad():
+        output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens, use_cache=True, )
+    generated_ids = [output_ids[i][len(inputs.input_ids[i]):] for i in range(len(output_ids))]
+    pred = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)[0]
+    return pred, None
+
 
 
 def run_experiment(
@@ -65,6 +74,7 @@ def run_experiment(
     resume,
     max_new_tokens,
     debug=False,
+    ppl=False,
     **kwargs
 ):
     model, processor = setup_model_func(model_base, device)
@@ -109,23 +119,19 @@ def run_experiment(
         prompt = example_prompt.replace("[OPTION]", str(options))
 
         accs = []
+        ppls = []
   
-        inputs = get_inputs_func(prompt, frames, processor)
+        inputs, ppl_kwargs = get_inputs_func(prompt, frames, processor, answer=answer, add_answer=True if ppl else False)
   
         try:
 
             if inference_func is None:
-                inputs = inputs.to(device)
-                input_ids = inputs.input_ids
-                with torch.no_grad():
-                    output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens, use_cache=True, )
-                generated_ids = [output_ids[i][len(inputs.input_ids[i]):] for i in range(len(output_ids))]
-                pred = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)[0]
+                pred, ppl = defualt_inference_func(model, processor, inputs, max_new_tokens=max_new_tokens, use_cache=True, ppl=ppl, **ppl_kwargs)
 
             else:
-                pred = inference_func(model, processor, inputs, max_new_tokens=max_new_tokens, use_cache=True)
+                pred, ppl = inference_func(model, processor, inputs, max_new_tokens=max_new_tokens, use_cache=True, ppl=ppl, **ppl_kwargs)
 
-           
+            
             acc = 0.0
             if extract_characters_regex(answer) == extract_characters_regex(pred):
                 acc = 1.0
@@ -135,9 +141,11 @@ def run_experiment(
 
             accs.append(acc)
 
+            ppls.append(ppl)
+
             
             
-            item_res = {'video_path': video_path, 'prompt':prompt, 'gt':answer, 'pred':pred, 'acc':acc }
+            item_res = {'video_path': video_path, 'prompt':prompt, 'gt':answer, 'pred':pred, 'acc':acc, 'ppl':ppl}
             append_to_jsonl(log_path, item_res)
             
             pbar.set_postfix({'accuracy': sum(accs)/len(accs), "gpu_id": kwargs.get('cur_gpu', 0)})
