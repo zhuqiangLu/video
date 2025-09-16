@@ -1,5 +1,16 @@
 import argparse
 
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError("Boolean value expected.")
+
 def get_args():
     parser = argparse.ArgumentParser(description='Evaluation for this bench')
     parser.add_argument('--dataset_name', default='videomme', type=str, help='Specify the dataset.')
@@ -29,7 +40,6 @@ def get_args():
     parser.add_argument("--resume", action="store_true", default=False, help="resume")
     parser.add_argument("--backend", type=str, default="decord", help="video decoding backend")
     parser.add_argument("--debug", action="store_true", default=False, help="debug")
-    
-
+    parser.add_argument("--ppl", type=str2bool, nargs="?", const=True, default=False, help="Pass True/False")
     return parser.parse_args()
 

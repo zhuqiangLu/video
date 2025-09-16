@@ -11,7 +11,7 @@ def dummy():
 
 
 
-def get_inputs_func(prompt, frames, processor):
+def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):
 
     content = list()
     content.append({"type": "text", "text": prompt})
@@ -26,6 +26,7 @@ def get_inputs_func(prompt, frames, processor):
         {"role": "user", "content": content},
     ]
     
+    ppl_inputs = dict() 
 
     inputs = processor.apply_chat_template(
         messages,
@@ -36,11 +37,33 @@ def get_inputs_func(prompt, frames, processor):
         num_frames=len(frames),
     ).to(dtype=torch.bfloat16)
     
+    
+    
+    if ppl:
+        assert answer is not None
+        start_idx = inputs.input_ids.shape[1] 
+
+        messages.append({"role": "assistant", "content": [{"type": "text", "text": answer}]})
+        inputs = processor.apply_chat_template(
+                    messages,
+                    add_generation_prompt=True,
+                    tokenize=True,
+                    return_dict=True,
+                    return_tensors="pt",
+                    num_frames=len(frames),
+                ).to(dtype=torch.bfloat16)
+
+        ppl_inputs['start_idx'] = start_idx
+
+    
+
+
     if len(frames) > 0:
         inputs.pixel_values = processor.video_processor(frames, return_tensors="pt").pixel_values.to(dtype=torch.bfloat16)
-   
+
+    
+    return inputs, ppl_inputs 
   
-    return inputs
 
 
 

@@ -2,7 +2,7 @@
 module load anaconda/2021.11
 export CUDA_HOME=/home/bingxing2/apps/cuda/11.7.0
 module load ffmpeg/4.4.1-gcc11  
-module load anaconda/2021.11 compilers/cuda/12.1 cudnn/8.8.1.3_cuda12.x compilers/gcc/11.3.0s
+module load anaconda/2021.11 compilers/cuda/12.1 cudnn/8.8.1.3_cuda12.x compilers/gcc/11.3.0
 conda activate infinity2
 
 export PYTHONUNBUFFERED=1
@@ -18,8 +18,8 @@ export NCCL_IB_GID_INDEX=3
 export NCCL_IB_TIMEOUT=23
 export NCCL_IB_RETRY_CNT=7
 
-export http_proxy=https://wanglintao:iHiz3wPzlBGIJ2YEkSlVlG8GKoffQNgbQVv9S6SswYQw1tr3Lvf7N7tTwGCW@blsc-proxy.pjlab.org.cn:13128
-export https_proxy=https://wanglintao:iHiz3wPzlBGIJ2YEkSlVlG8GKoffQNgbQVv9S6SswYQw1tr3Lvf7N7tTwGCW@blsc-proxy.pjlab.org.cn:13128
+export http_proxy=https://wanglintao:MEKLD6LPq5BPPDtozP0ag4ErMiYnOYwtoWKkqgjsLgmqlz4JsIqQGIaCxrST@blsc-proxy.pjlab.org.cn:13128
+export https_proxy=https://wanglintao:MEKLD6LPq5BPPDtozP0ag4ErMiYnOYwtoWKkqgjsLgmqlz4JsIqQGIaCxrST@blsc-proxy.pjlab.org.cn:13128
 
 
 # nodes
@@ -48,7 +48,7 @@ OUTPUT_LOG="./log/train_rank${NODE_RANK}_${JOB_ID}.log"
 # export CUDA_HOME=/home/bingxing2/apps/cuda/11.7.0
 export LD_PRELOAD=/home/bingxing2/ailab/scxlab0109/.conda/envs/dna_ft/lib/python3.8/site-packages/sklearn/__check_build/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
 
-source tasks/config.sh
+source tasks/test_config.sh
 
 echo $TASK
 echo $VIDEO_ROOT
@@ -59,10 +59,10 @@ echo $MAX_NEW_TOKENS
 echo $LIMIT
 
 export HF_HUB_OFFLINE=1
+MODEL_BASE=Qwen/Qwen2.5-VL-3B-Instruct
 
-MODEL_BASE=HuggingFaceTB/SmolVLM2-2.2B-Instruct
 
-NUM_FRAMES=16
+NUM_FRAMES=8
 # DEFAULT 
 for i in $(seq 0 $((NUM_GPUS-1)))
 do

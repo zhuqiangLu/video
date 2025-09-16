@@ -61,6 +61,8 @@ echo $MAX_NEW_TOKENS
 echo $LIMIT
 
 MODEL_BASE=microsoft/Phi-3.5-vision-instruct
+export HF_HUB_OFFLINE=1
+
 
 
 NUM_FRAMES=16

@@ -100,7 +100,7 @@ def load_video(video_path, bound=None, input_size=448, max_num=1, num_segments=3
     pixel_values = torch.cat(pixel_values_list)
     return pixel_values, num_patches_list
     
-def get_inputs_func(prompt, frames, processor, input_size=448, max_num=1, num_segments=32):    
+def get_inputs_func(prompt, frames, processor, input_size=448, max_num=1, num_segments=32, ppl=False, answer=None):    
     content = list()
 
     transform = build_transform(input_size=input_size)
@@ -123,11 +123,18 @@ def get_inputs_func(prompt, frames, processor, input_size=448, max_num=1, num_se
    
 
     mesg = video_prefix + prompt 
+    ppl_inputs = dict() 
+
+    
+
 
     ret = dict() 
     ret['pixel_values'] = pixel_values
     ret['num_patches_list'] = num_patches_list
     ret['question'] = mesg
+
+    if ppl:
+        raise NotImplementedError("PPL is not supported for InternVL3")
 
     return ret
                 
@@ -162,7 +169,7 @@ def inference_func(model, tokenizer, inputs, max_new_tokens=20, use_cache=True):
         response = model.chat(tokenizer, pixel_values, question, generation_config,
                                 num_patches_list=num_patches_list, history=None, return_history=False)
         
-    return response
+    return response, None
 
 modeling_funcs_builder.register("InternVL3", setup_model, get_inputs_func, inference_func)
     

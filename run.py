@@ -28,6 +28,7 @@ if __name__=='__main__':
 
     exp_configurator = configurator(**vars(args))
 
+
     run_experiment(
         exp_configurator=exp_configurator,
         get_inputs_func=get_inputs_func,

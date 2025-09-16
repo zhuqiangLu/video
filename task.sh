@@ -48,46 +48,20 @@ OUTPUT_LOG="./log/train_rank${NODE_RANK}_${JOB_ID}.log"
 # export CUDA_HOME=/home/bingxing2/apps/cuda/11.7.0
 export LD_PRELOAD=/home/bingxing2/ailab/scxlab0109/.conda/envs/dna_ft/lib/python3.8/site-packages/sklearn/__check_build/../../scikit_learn.libs/libgomp-d22c30c5.so.1.0.0
 
+source tasks/config.sh
+
+echo $TASK
+echo $VIDEO_ROOT
+echo $DATA_FILES
+echo $RESULT_DIR
+echo $BACKEND
+echo $MAX_NEW_TOKENS
+echo $LIMIT
+
+export HF_HUB_OFFLINE=1
 
 
-TASK=TIGER-Lab/VideoEval-Pro
-TASK=lmms-lab/Video-MME
-# TASK=motionbench
-RESULT_DIR=results_debug/test/$TASK
-
-
-case $TASK in
-    "lmms-lab/Video-MME")
-        VIDEO_ROOT=/home/bingxing2/ailab/scxlab0109/.cache/huggingface/hub/datasets--lmms-lab--Video-MME/snapshots/ead1408f75b618502df9a1d8e0950166bf0a2a0b/data
-        DATA_FILES=/home/bingxing2/ailab/scxlab0109/.cache/huggingface/hub/datasets--lmms-lab--Video-MME/snapshots/ead1408f75b618502df9a1d8e0950166bf0a2a0b/videomme/test-00000-of-00001.parquet
-        ;;
-    "TIGER-Lab/VideoEval-Pro")
-        VIDEO_ROOT=/home/bingxing2/ailab/scxlab0109/.cache/huggingface/hub/datasets--TIGER-Lab--VideoEval-Pro/snapshots/a38a853b22576c7918e9cc0d1d4eedf9d46a1cae/videos/videos_filtered/
-        DATA_FILES=/home/bingxing2/ailab/scxlab0109/.cache/huggingface/hub/datasets--TIGER-Lab--VideoEval-Pro/snapshots/a38a853b22576c7918e9cc0d1d4eedf9d46a1cae/data/test-00000-of-00001.parquet
-        ;;
-    "motionbench")
-        VIDEO_ROOT=/home/bingxing2/ailab/scxlab0109/.cache/huggingface/hub/datasets--zhuqiang--motion_data/snapshots/2d0613058c3f98330061bfad717d39b832f65f8f/MotionBench/
-        DATA_FILES=None
-        ;;
-    *)
-        echo "Invalid task"
-        exit 1
-        ;;
-esac
-
-# MODEL_BASE=models/gemma-3n-E2B-it
-# MODEL_BASE=models/Phi-3.5-vision-instruct
-# MODEL_BASE=models/Qwen2.5-VL-3B-Instruct
-# MODEL_BASE=models/SmolVLM2-2.2B-Instruct
-# MODEL_BASE=models/InternVL3_5-2B
-
-MODEL_BASE=google/gemma-3n-E2B-it
-MODEL_BASE=microsoft/Phi-3.5-vision-instruct
-MODEL_BASE=Qwen/Qwen2.5-VL-3B-Instruct
-MODEL_BASE=HuggingFaceTB/SmolVLM2-2.2B-Instruct
-# MODEL_BASE=models/InternVL3_5-2B
-
-# NUM_GPUS=2
+# DEFAULT 
 for i in $(seq 0 $((NUM_GPUS-1)))
 do
     python run.py \
@@ -99,10 +73,230 @@ do
         --batch_size 1 \
         --result_dir $RESULT_DIR \
         --num_gpus $NUM_GPUS \
-        --max_num_frames 16 \
-        --shuffle_frame 
-        --limit 1.0 \
+        --max_num_frames $NUM_FRAMES \
+        --max_new_tokens $MAX_NEW_TOKENS \
+        --limit $LIMIT \
         --use_local_parquest \
+        --backend $BACKEND \
+        --ppl $PPL \
+        --cur_gpu $i &
+done
+wait
+exit 
+# shuffle frame
+for i in $(seq 0 $((NUM_GPUS-1)))
+do
+    python run.py \
+        --dataset_name $TASK \
+        --video_root  $VIDEO_ROOT \
+        --data_files $DATA_FILES \
+        --split test \
+        --model_base $MODEL_BASE \
+        --batch_size 1 \
+        --max_new_tokens $MAX_NEW_TOKENS \
+        --result_dir $RESULT_DIR \
+        --num_gpus $NUM_GPUS \
+        --max_num_frames $NUM_FRAMES \
+        --shuffle_frame \
+        --limit $LIMIT \
+        --use_local_parquest \
+        --backend $BACKEND \
+        --ppl $PPL \
+        --cur_gpu $i &
+done
+wait
+
+# shuffle video
+for i in $(seq 0 $((NUM_GPUS-1)))
+do
+    python run.py \
+        --dataset_name $TASK \
+        --video_root  $VIDEO_ROOT \
+        --data_files $DATA_FILES \
+        --split test \
+        --model_base $MODEL_BASE \
+        --batch_size 1 \
+        --result_dir $RESULT_DIR \
+        --num_gpus $NUM_GPUS \
+        --max_num_frames $NUM_FRAMES \
+        --max_new_tokens $MAX_NEW_TOKENS \
+        --shuffle_video \
+        --limit $LIMIT \
+        --use_local_parquest \
+        --backend $BACKEND \
+        --ppl $PPL \
+        --cur_gpu $i &
+done
+wait
+
+# frozen video
+for i in $(seq 0 $((NUM_GPUS-1)))
+do
+    python run.py \
+        --dataset_name $TASK \
+        --video_root  $VIDEO_ROOT \
+        --data_files $DATA_FILES \
+        --split test \
+        --model_base $MODEL_BASE \
+        --batch_size 1 \
+        --result_dir $RESULT_DIR \
+        --num_gpus $NUM_GPUS \
+        --max_num_frames $NUM_FRAMES \
+        --max_new_tokens $MAX_NEW_TOKENS \
+        --frozen_video \
+        --limit $LIMIT \
+        --use_local_parquest \
+        --backend $BACKEND \
+        --ppl $PPL \
+        --cur_gpu $i &
+done
+wait
+
+# frozen video + custom question: bool
+for i in $(seq 0 $((NUM_GPUS-1)))
+do
+    python run.py \
+        --dataset_name $TASK \
+        --video_root  $VIDEO_ROOT \
+        --data_files $DATA_FILES \
+        --split test \
+        --model_base $MODEL_BASE \
+        --batch_size 1 \
+        --result_dir $RESULT_DIR \
+        --num_gpus $NUM_GPUS \
+        --max_num_frames $NUM_FRAMES \
+        --max_new_tokens $MAX_NEW_TOKENS \
+        --frozen_video \
+        --custom_question "frozen_video_bool" \
+        --limit $LIMIT \
+        --use_local_parquest \
+        --backend $BACKEND \
+        --ppl $PPL \
+        --cur_gpu $i &
+done
+wait
+
+
+
+
+
+
+#  no correct answer
+for i in $(seq 0 $((NUM_GPUS-1)))
+do
+    python run.py \
+        --dataset_name $TASK \
+        --video_root  $VIDEO_ROOT \
+        --data_files $DATA_FILES \
+        --split test \
+        --model_base $MODEL_BASE \
+        --batch_size 1 \
+        --result_dir $RESULT_DIR \
+        --num_gpus $NUM_GPUS \
+        --max_num_frames $NUM_FRAMES \
+        --max_new_tokens $MAX_NEW_TOKENS \
+        --replace_correct_with_extra \
+        --limit $LIMIT \
+        --use_local_parquest \
+        --backend $BACKEND \
+        --ppl $PPL \
+        --cur_gpu $i &
+done
+wait
+
+#  no video
+for i in $(seq 0 $((NUM_GPUS-1)))
+do
+    python run.py \
+        --dataset_name $TASK \
+        --video_root  $VIDEO_ROOT \
+        --data_files $DATA_FILES \
+        --split test \
+        --model_base $MODEL_BASE \
+        --batch_size 1 \
+        --result_dir $RESULT_DIR \
+        --num_gpus $NUM_GPUS \
+        --max_num_frames $NUM_FRAMES \
+        --max_new_tokens $MAX_NEW_TOKENS \
+        --no_video \
+        --limit $LIMIT \
+        --use_local_parquest \
+        --backend $BACKEND \
+        --ppl $PPL \
+        --cur_gpu $i &
+done
+wait
+
+
+# add extra options
+for i in $(seq 0 $((NUM_GPUS-1)))
+do
+    python run.py \
+        --dataset_name $TASK \
+        --video_root  $VIDEO_ROOT \
+        --data_files $DATA_FILES \
+        --split test \
+        --model_base $MODEL_BASE \
+        --batch_size 1 \
+        --result_dir $RESULT_DIR \
+        --num_gpus $NUM_GPUS \
+        --max_num_frames $NUM_FRAMES \
+        --max_new_tokens $MAX_NEW_TOKENS \
+        --add_extra_options \
+        --limit $LIMIT \
+        --use_local_parquest \
+        --backend $BACKEND \
+        --ppl $PPL \
+        --cur_gpu $i &
+done
+wait
+
+
+
+# reverse frame
+for i in $(seq 0 $((NUM_GPUS-1)))
+do
+    python run.py \
+        --dataset_name $TASK \
+        --video_root  $VIDEO_ROOT \
+        --data_files $DATA_FILES \
+        --split test \
+        --model_base $MODEL_BASE \
+        --batch_size 1 \
+        --reverse_frame \
+        --result_dir $RESULT_DIR \
+        --num_gpus $NUM_GPUS \
+        --max_num_frames $NUM_FRAMES \
+        --max_new_tokens $MAX_NEW_TOKENS \
+        --limit $LIMIT \
+        --use_local_parquest \
+        --backend $BACKEND \
+        --ppl $PPL \
+        --cur_gpu $i &
+done
+wait
+
+
+# reverse frame
+for i in $(seq 0 $((NUM_GPUS-1)))
+do
+    python run.py \
+        --dataset_name $TASK \
+        --video_root  $VIDEO_ROOT \
+        --data_files $DATA_FILES \
+        --split test \
+        --model_base $MODEL_BASE \
+        --batch_size 1 \
+        --reverse_frame \
+        --add_extra_options \
+        --result_dir $RESULT_DIR \
+        --num_gpus $NUM_GPUS \
+        --max_num_frames $NUM_FRAMES \
+        --max_new_tokens $MAX_NEW_TOKENS \
+        --limit $LIMIT \
+        --use_local_parquest \
+        --backend $BACKEND \
+        --ppl $PPL \
         --cur_gpu $i &
 done
 wait

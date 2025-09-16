@@ -14,7 +14,7 @@ import numpy as np
 # """
 
 
-GQA_TEMPLATE = """Answer the question: "[QUESTION]" according to the content of the video. Select the answer from :[OPTION]. Answer the question by outputting the corresponding letter of the option, then briefly explain the reason.
+GQA_TEMPLATE= """Answer the question: "[QUESTION]" according to the content of the video. Select the answer from :[OPTION]. Answer the question by outputting the corresponding letter of the option, then briefly explain the reason.
 """
 
 
@@ -52,14 +52,51 @@ def append_to_jsonl(file_path, data):
 
 
 
-def defualt_inference_func(model, processor, inputs, max_new_tokens, use_cache, ppl=False, **ppl_kwargs):
+def defualt_inference_func(model, processor, inputs, max_new_tokens, use_cache, ppl=False, **ppl_inputs):
     inputs = inputs.to(model.device)
     input_ids = inputs.input_ids
-    with torch.no_grad():
-        output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens, use_cache=True, )
-    generated_ids = [output_ids[i][len(inputs.input_ids[i]):] for i in range(len(output_ids))]
-    pred = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)[0]
-    return pred, None
+
+    pred = "" 
+    ppl_value = None
+
+    if ppl:
+        start_idx = ppl_inputs.get("start_idx", None)
+
+        target_ids = torch.ones_like(input_ids) 
+        
+        target_ids[:, :start_idx] = -100
+        with torch.no_grad():
+            output_ids = model(**inputs, labels=target_ids, return_dict=True)
+            neg_log_likelihood = output_ids.loss
+            num_loss_tokens = (target_ids != -100).sum().item()
+            print(output_ids.logits.shape, start_idx, num_loss_tokens, inputs.input_ids.shape)
+
+            logits = output_ids.logits[:, start_idx:].squeeze(0)
+            label = torch.zeros(logits.shape[0]).to(logits.device, dtype=torch.long)
+            print(logits.shape, inputs.input_ids.shape, label.shape)
+            nll = torch.nn.functional.cross_entropy(logits, label, reduction='mean')
+
+            logits = torch.nn.functional.log_softmax(logits, dim=-1)
+            ans = processor.batch_decode(inputs.input_ids[:, start_idx:], skip_special_tokens=True, clean_up_tokenization_spaces=True)[0]
+            text = processor.batch_decode(inputs.input_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)[0]
+
+
+            print(logits.shape, text, ans)
+            raise
+
+
+        ppl_value = torch.exp(neg_log_likelihood).item()
+        ppl_value_2 = torch.exp(nll).item()
+        print(ppl_value, ppl_value_2, neg_log_likelihood, nll)
+        raise
+
+            
+    else:
+        with torch.no_grad():
+            output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens, use_cache=True, )
+        generated_ids = [output_ids[i][len(inputs.input_ids[i]):] for i in range(len(output_ids))]
+        pred = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)[0]
+    return pred, ppl_value
 
 
 
@@ -121,15 +158,17 @@ def run_experiment(
         accs = []
         ppls = []
   
-        inputs, ppl_kwargs = get_inputs_func(prompt, frames, processor, answer=answer, add_answer=True if ppl else False)
-  
-        try:
+        inputs, ppl_inputs = get_inputs_func(prompt, frames, processor, ppl=ppl, answer=answer)
+        
+        # try:
+        if True:
 
             if inference_func is None:
-                pred, ppl = defualt_inference_func(model, processor, inputs, max_new_tokens=max_new_tokens, use_cache=True, ppl=ppl, **ppl_kwargs)
+                pred, ppl_value = defualt_inference_func(model, processor, inputs, max_new_tokens=max_new_tokens, use_cache=True, ppl=ppl, **ppl_inputs)
 
             else:
-                pred, ppl = inference_func(model, processor, inputs, max_new_tokens=max_new_tokens, use_cache=True, ppl=ppl, **ppl_kwargs)
+                pred, ppl_value = inference_func(model, processor, inputs, max_new_tokens=max_new_tokens, use_cache=True, ppl=ppl, **ppl_inputs)
+
 
             
             acc = 0.0
@@ -141,18 +180,18 @@ def run_experiment(
 
             accs.append(acc)
 
-            ppls.append(ppl)
+            ppls.append(ppl_value)
 
             
             
-            item_res = {'video_path': video_path, 'prompt':prompt, 'gt':answer, 'pred':pred, 'acc':acc, 'ppl':ppl}
+            item_res = {'video_path': video_path, 'prompt':prompt, 'gt':answer, 'pred':pred, 'acc':acc, 'ppl':ppl_value}
             append_to_jsonl(log_path, item_res)
             
             pbar.set_postfix({'accuracy': sum(accs)/len(accs), "gpu_id": kwargs.get('cur_gpu', 0)})
 
-        except Exception as e: 
-            print(f"Error: {e}")
-            print(f"video_path: {video_path}")
+        # except Exception as e: 
+        #     print(f"Error: {e}")
+        #     print(f"video_path: {video_path}")
 
 
             

@@ -7,21 +7,49 @@ import argparse
 from collections import defaultdict
 from pprint import pprint
 from tqdm import tqdm
-from utils.misc import extract_characters_regex
+# from utils.misc import extract_characters_regex
+import re
 from tabulate import tabulate
 
 args = argparse.ArgumentParser()
 args.add_argument('--result_dir', type=str, required=True)
 args.add_argument('--include', type=str, default="", required=False)
 args.add_argument('--save_report', default=False, action='store_true',  required=False)
+args.add_argument('--ppl', default=False, action='store_true',  required=False)
+
 args = args.parse_args()
 
+def extract_characters_regex(s):
+    s = s.strip()
+    answer_prefixes = [
+        "The best answer is",
+        "The correct answer is",
+        "The answer is",
+        "The answer",
+        "The best option is",
+        "The correct option is",
+        "Best answer:" "Best option:",
+    ]
+    for answer_prefix in answer_prefixes:
+        s = s.replace(answer_prefix, "")
 
-def acc(jsonl):
-    acc = list()
+    if len(s.split()) > 10 and not re.search("[ABCDEFG]", s):
+        return ""
+
+    matches = re.search(r"[ABCDEFG]", s)
+    if matches is None:
+        return ""
+    return matches[0]
+
+
+
+def ppl(jsonl):
+    ppl = list()
     for _, item in jsonl.items():
-        acc.append(item['acc']) 
-    return np.mean(acc)
+        ppl.append(item['ppl']) 
+    return np.mean(ppl), np.std(ppl), np.max(ppl), np.min(ppl)
+
+
 
 def group_jsonls(jsonl_dir):
     all_jsonl = glob(os.path.join(jsonl_dir, '*.jsonl'))
@@ -114,30 +142,41 @@ if __name__ == '__main__':
 
     for base_model, exp_settings in all_base_model.items():
         # base_model_jsonl = all_exp[base_model]
-        for exp_setting in tqdm(exp_settings):
-            if base_model != exp_setting:
-                base_json_dir = os.path.join(args.result_dir, base_model)
-                setting_json_dir = os.path.join(args.result_dir, exp_setting)
-                base_config = parse_config(os.path.join(base_json_dir, 'config.json'))
+        print('Now analyzing', base_model)
+        if args.ppl:
+            ppl_mean, ppl_std, ppl_max, ppl_min = ppl(group_jsonls(os.path.join(args.result_dir, base_model)))
+            print(f'{base_model} PPL: {ppl_mean:.4f} ± {ppl_std:.4f} (max: {ppl_max:.4f}, min: {ppl_min:.4f})')
+            for exp_setting in exp_settings:
+                ppl_mean, ppl_std, ppl_max, ppl_min = ppl(group_jsonls(os.path.join(args.result_dir, exp_setting)))
+                print(f'{exp_setting} PPL: {ppl_mean:.4f} ± {ppl_std:.4f} (max: {ppl_max:.4f}, min: {ppl_min:.4f})')
+        else:
+            for exp_setting in exp_settings:
+                if base_model != exp_setting:
+                    base_json_dir = os.path.join(args.result_dir, base_model)
+                    setting_json_dir = os.path.join(args.result_dir, exp_setting)
+                    base_config = parse_config(os.path.join(base_json_dir, 'config.json'))
+                    
+                    base_json_dict = group_jsonls(base_json_dir)
+                    setting_json_dict = group_jsonls(setting_json_dir)
                 
-                base_json_dict = group_jsonls(base_json_dir)
-                setting_json_dict = group_jsonls(setting_json_dir)
-               
-                headers, data = build_table(exp_setting, ) 
-                cs, hit_rate, consistency_report = consistency(base_json_dict, setting_json_dict)
-                headers.append('# items (base|exp)')
-                data[0].append([f"{len(base_json_dict)}|{len(setting_json_dict)}"])
-                headers.append('# acc (base|exp)')
-                data[0].append([f"{acc(base_json_dict):.4f}|{acc(setting_json_dict):.4f}"])
-                headers.append('# consistency')
-                data[0].append([f"{cs:.4f}"])
-                headers.append('# hit rate')
-                data[0].append([f"{hit_rate:.4f}"])
-                print(tabulate(data, headers=headers, tablefmt="grid"), )
-                if args.save_report:
-                    print(f'saving report to {os.path.join(args.result_dir, f"{base_model}_vs_{exp_setting}.json")}')
-                    with open(os.path.join(args.result_dir, f'{base_model}_vs_{exp_setting}.json'), 'w') as f:
-                        json.dump(consistency_report, f, indent=4)
+                    headers, data = build_table(exp_setting, ) 
+                    cs, hit_rate, consistency_report = consistency(base_json_dict, setting_json_dict)
+                    headers.append('# items (base|exp)')
+                    data[0].append([f"{len(base_json_dict)}|{len(setting_json_dict)}"])
+                    headers.append('# acc (base|exp)')
+                    data[0].append([f"{acc(base_json_dict):.4f}|{acc(setting_json_dict):.4f}"])
+                    headers.append('# consistency')
+                    data[0].append([f"{cs:.4f}"])
+                    headers.append('# hit rate')
+                    data[0].append([f"{hit_rate:.4f}"])
+                    print(tabulate(data, headers=headers, tablefmt="grid"), )
+                    if args.save_report:
+                        print(f'saving report to {os.path.join(args.result_dir, f"{base_model}_vs_{exp_setting}.json")}')
+                        with open(os.path.join(args.result_dir, f'{base_model}_vs_{exp_setting}.json'), 'w') as f:
+                            json.dump(consistency_report, f, indent=4)
+
+            print('#'*200)
+            print('#'*200)
 
 
 

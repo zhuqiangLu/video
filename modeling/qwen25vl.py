@@ -9,7 +9,7 @@ from qwen_vl_utils import process_vision_info
 def dummy():
     pass
     
-def get_inputs_func(prompt, frames, processor):    
+def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):    
     content = list()
     if len(frames) > 0:
         content.append(
@@ -29,7 +29,6 @@ def get_inputs_func(prompt, frames, processor):
         messages, tokenize=False, add_generation_prompt=True
     )
     image_inputs, video_inputs = process_vision_info([messages])
-    
     inputs = processor(
         text=[text],
         images=image_inputs,
@@ -37,7 +36,20 @@ def get_inputs_func(prompt, frames, processor):
         padding=True,
         return_tensors="pt",
     )
-    return inputs
+
+    ppl_inputs = dict() 
+
+    if ppl:
+        assert answer is not None
+        start_idx = inputs.input_ids.shape[1] 
+
+        messages.append({"role": "assistant", "content": [{"type": "text", "text": answer}]})
+        text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        inputs = processor(text=text, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
+
+        ppl_inputs['start_idx'] = start_idx
+
+    return inputs, ppl_inputs 
     
 
 
