@@ -44,6 +44,7 @@ def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):
 
         messages.append({"role": "assistant", "content": [{"type": "text", "text": answer}]})
         text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+        # print(text)
         inputs = processor(text=text, images=image_inputs, videos=video_inputs, padding=False, return_tensors="pt")
         
         # raise
@@ -68,7 +69,9 @@ def setup_model(model_base, device, text_only_model=False):
         device_map=device,
         trust_remote_code=True
     )
-    processor = AutoProcessor.from_pretrained(model_base, trust_remote_code=True)
+    min_pixels = 256 * 28 * 28
+    max_pixels = 2560 * 28 * 28 
+    processor = AutoProcessor.from_pretrained(model_base,  min_pixels=min_pixels, max_pixels=max_pixels, trust_remote_code=True)
   
     return model, processor
 

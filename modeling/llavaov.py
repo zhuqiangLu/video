@@ -30,6 +30,9 @@ def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):
     prompt = processor.apply_chat_template(messages, add_generation_prompt=not ppl)
 
     frames = None if len(frames) == 0 else frames
+
+    # resize frames 
+    frames = [frame.resize((336, 336)) for frame in frames]
     inputs = processor(images=frames, text=prompt, return_tensors='pt').to(torch.bfloat16)
     ppl_inputs = dict() 
     if ppl:
@@ -58,7 +61,7 @@ def setup_model(model_base, device, text_only_model=False):
         device_map=device,
         trust_remote_code=True
     )
-    processor = AutoProcessor.from_pretrained(model_base, num_crops=4,trust_remote_code=True)
+    processor = AutoProcessor.from_pretrained(model_base, trust_remote_code=True)
   
     return model, processor
 

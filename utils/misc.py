@@ -73,6 +73,7 @@ def defualt_inference_func(model, processor, inputs, max_new_tokens, use_cache, 
         # target_ids[:, :start_idx] = -100
         # target_ids[:, :start_idx] = -100
         with torch.no_grad():
+            # print(inputs.input_ids.shape, inputs.input_ids.device)
             output_ids = model(**inputs, labels=labels, return_dict=True)
             nll = output_ids.loss
             ppl_value = float(torch.exp(nll))
