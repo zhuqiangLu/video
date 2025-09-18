@@ -26,17 +26,16 @@ def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):
     # print(messages)
     # Preparation for inference
     text = processor.apply_chat_template(
-        messages, tokenize=False, add_generation_prompt=True
+        messages, tokenize=False, add_generation_prompt=not ppl
     )
     image_inputs, video_inputs = process_vision_info([messages])
     inputs = processor(
         text=[text],
         images=image_inputs,
         videos=video_inputs,
-        padding=True,
+        padding=False,
         return_tensors="pt",
     )
-
     ppl_inputs = dict() 
 
     if ppl:
@@ -44,11 +43,15 @@ def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):
         start_idx = inputs.input_ids.shape[1] 
 
         messages.append({"role": "assistant", "content": [{"type": "text", "text": answer}]})
-        text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        inputs = processor(text=text, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
+        text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+        inputs = processor(text=text, images=image_inputs, videos=video_inputs, padding=False, return_tensors="pt")
+        
+        # raise
 
         ppl_inputs['start_idx'] = start_idx
 
+
+   
     return inputs, ppl_inputs 
     
 
@@ -65,7 +68,7 @@ def setup_model(model_base, device, text_only_model=False):
         device_map=device,
         trust_remote_code=True
     )
-    processor = AutoProcessor.from_pretrained(model_base, num_crops=4,trust_remote_code=True)
+    processor = AutoProcessor.from_pretrained(model_base, trust_remote_code=True)
   
     return model, processor
 

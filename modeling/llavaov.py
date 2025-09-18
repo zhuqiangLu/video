@@ -27,7 +27,7 @@ def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):
     messages = [
         {"role": "user", "content": content},
     ]
-    prompt = processor.apply_chat_template(messages, add_generation_prompt=True)
+    prompt = processor.apply_chat_template(messages, add_generation_prompt=not ppl)
 
     frames = None if len(frames) == 0 else frames
     inputs = processor(images=frames, text=prompt, return_tensors='pt').to(torch.bfloat16)
@@ -37,7 +37,7 @@ def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):
         start_idx = inputs.input_ids.shape[1] 
 
         messages.append({"role": "assistant", "content": [{"type": "text", "text": answer}]})
-        prompt = processor.apply_chat_template(messages, add_generation_prompt=True)
+        prompt = processor.apply_chat_template(messages, add_generation_prompt=False)
         inputs = processor(images=frames, text=prompt, return_tensors='pt').to(torch.bfloat16)
 
         ppl_inputs['start_idx'] = start_idx

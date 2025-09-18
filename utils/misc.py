@@ -62,33 +62,48 @@ def defualt_inference_func(model, processor, inputs, max_new_tokens, use_cache, 
     if ppl:
         start_idx = ppl_inputs.get("start_idx", None)
 
-        target_ids = torch.ones_like(input_ids) 
+        # target_ids = torch.ones_like(input_ids) 
+        target_ids = input_ids.clone()
+        labels = input_ids.clone()
+
+        labels[:, :start_idx] = -100
+
         
-        target_ids[:, :start_idx] = -100
+        
+        # target_ids[:, :start_idx] = -100
+        # target_ids[:, :start_idx] = -100
         with torch.no_grad():
-            output_ids = model(**inputs, labels=target_ids, return_dict=True)
-            neg_log_likelihood = output_ids.loss
-            num_loss_tokens = (target_ids != -100).sum().item()
-            print(output_ids.logits.shape, start_idx, num_loss_tokens, inputs.input_ids.shape)
+            output_ids = model(**inputs, labels=labels, return_dict=True)
+            nll = output_ids.loss
+            ppl_value = float(torch.exp(nll))
 
-            logits = output_ids.logits[:, start_idx:].squeeze(0)
-            label = torch.zeros(logits.shape[0]).to(logits.device, dtype=torch.long)
-            print(logits.shape, inputs.input_ids.shape, label.shape)
-            nll = torch.nn.functional.cross_entropy(logits, label, reduction='mean')
+            # logits = output_ids.logits
 
-            logits = torch.nn.functional.log_softmax(logits, dim=-1)
-            ans = processor.batch_decode(inputs.input_ids[:, start_idx:], skip_special_tokens=True, clean_up_tokenization_spaces=True)[0]
-            text = processor.batch_decode(inputs.input_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)[0]
+            # shift_logits = logits[:, :-1].contiguous() 
+            # shift_labels = labels[:, 1:].contiguous()
+
+            # if processor.tokenizer.pad_token_id is not None:
+            #     shift_labels[shift_labels == processor.tokenizer.pad_token_id] = -100
+            # log_probs = torch.nn.functional.log_softmax(shift_logits, dim=-1) 
+
+            # 
+            # # shift_log_probs = log_probs.gather(dim=-1, index=shift_labels.unsqueeze(dim=-1)).squeeze(dim=1) 
+        
+            # start_idx -= 1 # because of the shifted
+            # shift_log_probs = log_probs[:, start_idx:].gather(dim=-1, index=shift_labels[:, start_idx:].unsqueeze(dim=-1)).squeeze(dim=1) 
 
 
-            print(logits.shape, text, ans)
-            raise
+
+            # 
+            # nll = -shift_log_probs.mean()
+
+            # logits_ppl = float(torch.exp(nll))
+            # 
+
+            # print(loss_ppl, logits_ppl)
 
 
-        ppl_value = torch.exp(neg_log_likelihood).item()
-        ppl_value_2 = torch.exp(nll).item()
-        print(ppl_value, ppl_value_2, neg_log_likelihood, nll)
-        raise
+        
 
             
     else:
@@ -157,7 +172,6 @@ def run_experiment(
 
         accs = []
         ppls = []
-  
         inputs, ppl_inputs = get_inputs_func(prompt, frames, processor, ppl=ppl, answer=answer)
         
         # try:

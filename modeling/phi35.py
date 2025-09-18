@@ -20,8 +20,8 @@ def get_inputs_func(prompt, frames, processor, ppl=False, answer=None):
         {"role": "user", "content": content},
     ]
 
-    text = processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    inputs = processor(text=text, images=frames if len(frames) > 0 else None, padding=True, return_tensors="pt")
+    text = processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=not ppl)
+    inputs = processor(text=text, images=frames if len(frames) > 0 else None, padding=False, return_tensors="pt")
 
     ppl_inputs = dict()
 
@@ -30,9 +30,8 @@ def get_inputs_func(prompt, frames, processor, ppl=False, answer=None):
         start_idx = inputs.input_ids.shape[1] 
 
         messages.append({"role": "assistant", "content": answer})
-        text = processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        inputs = processor(text=text, images=frames if len(frames) > 0 else None, padding=True, return_tensors="pt")
-
+        text = processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+        inputs = processor(text=text, images=frames if len(frames) > 0 else None, padding=False, return_tensors="pt")
         ppl_inputs['start_idx'] = start_idx
 
 
