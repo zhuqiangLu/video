@@ -32,7 +32,9 @@ def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):
     frames = None if len(frames) == 0 else frames
 
     # resize frames 
-    frames = [frame.resize((336, 336)) for frame in frames]
+    if frames is not None:
+        frames = [frame.resize((336, 336)) for frame in frames]
+
     inputs = processor(images=frames, text=prompt, return_tensors='pt').to(torch.bfloat16)
     ppl_inputs = dict() 
     if ppl:
