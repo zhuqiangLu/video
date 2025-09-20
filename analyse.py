@@ -16,6 +16,7 @@ args.add_argument('--result_dir', type=str, required=True)
 args.add_argument('--include', type=str, default="", required=False)
 args.add_argument('--save_report', default=False, action='store_true',  required=False)
 args.add_argument('--ppl', default=False, action='store_true',  required=False)
+args.add_argument('--ppl_ref_dir', type=str, default=None, required=False)
 
 args = args.parse_args()
 
@@ -48,6 +49,19 @@ def ppl(jsonl):
     for _, item in jsonl.items():
         ppl.append(item['ppl']) 
     return np.mean(ppl), np.std(ppl), np.max(ppl), np.min(ppl)
+
+
+def filter_jsonl_by_acc(jsonl, ref_jsonl, filter_key, filter_value):
+    filtered_jsonl = dict()
+    for key, item in ref_jsonl.items():
+        if item[filter_key] == filter_value:
+            # keys = list(jsonl.keys())[0]
+            # print(keys)
+            # print(key)
+            # raise
+            filtered_jsonl[key] = jsonl[key]
+    return filtered_jsonl
+   
 
 
 
@@ -144,11 +158,29 @@ if __name__ == '__main__':
         # base_model_jsonl = all_exp[base_model]
         print('Now analyzing', base_model)
         if args.ppl:
-            ppl_mean, ppl_std, ppl_max, ppl_min = ppl(group_jsonls(os.path.join(args.result_dir, base_model)))
-            print(f'{base_model} PPL: {ppl_mean:.4f} ± {ppl_std:.4f} (max: {ppl_max:.4f}, min: {ppl_min:.4f})')
+            if args.ppl_ref_dir is not None:
+                ref_jsonl = group_jsonls(os.path.join(args.ppl_ref_dir, base_model))
+            else:
+                ref_jsonl = None
+
+            
+            base_ppl_jsonl = group_jsonls(os.path.join(args.result_dir, base_model))
+            try:
+                base_ppl_jsonl = filter_jsonl_by_acc(base_ppl_jsonl, ref_jsonl, 'acc', 0.0)
+            except:
+                print(f'{base_model} has no acc == 1.0')
+                continue
+            ppl_mean, ppl_std, ppl_max, ppl_min = ppl(base_ppl_jsonl)
+            print(f'{base_model}: {os.path.join(args.ppl_ref_dir, base_model)} PPL: {ppl_mean:.4f} ± {ppl_std:.4f} (max: {ppl_max:.4f}, min: {ppl_min:.4f})')
             for exp_setting in exp_settings:
-                ppl_mean, ppl_std, ppl_max, ppl_min = ppl(group_jsonls(os.path.join(args.result_dir, exp_setting)))
-                print(f'{exp_setting} PPL: {ppl_mean:.4f} ± {ppl_std:.4f} (max: {ppl_max:.4f}, min: {ppl_min:.4f})')
+                exp_ppl_jsonl = group_jsonls(os.path.join(args.result_dir, exp_setting))
+                try:
+                    exp_ppl_jsonl = filter_jsonl_by_acc(exp_ppl_jsonl, ref_jsonl, 'acc', 1.0)
+                except:
+                    print(f'{exp_setting} has no acc == 1.0')
+                    continue
+                ppl_mean, ppl_std, ppl_max, ppl_min = ppl(exp_ppl_jsonl)
+                print(f'{exp_setting}: {os.path.join(args.result_dir, exp_setting)} PPL: {ppl_mean:.4f} ± {ppl_std:.4f} (max: {ppl_max:.4f}, min: {ppl_min:.4f})')
         else:
             for exp_setting in exp_settings:
                 if base_model != exp_setting:
