@@ -10,6 +10,9 @@ from tqdm import tqdm
 # from utils.misc import extract_characters_regex
 import re
 from tabulate import tabulate
+import matplotlib.pyplot as plt
+
+
 
 args = argparse.ArgumentParser()
 args.add_argument('--result_dir', type=str, required=True)
@@ -17,8 +20,116 @@ args.add_argument('--include', type=str, default="", required=False)
 args.add_argument('--save_report', default=False, action='store_true',  required=False)
 args.add_argument('--ppl', default=False, action='store_true',  required=False)
 args.add_argument('--ppl_ref_dir', type=str, default=None, required=False)
-
+args.add_argument('--filter_key', type=str, default=None, required=False)
+args.add_argument('--filter_value', type=float, default=None, required=False)
+args.add_argument('--draw_ppl_plot', action='store_true', default=False, required=False)
 args = args.parse_args()
+
+
+def draw_ppl_plot(ppl_data_list, base_model, plot_dir):
+
+    ppl_mean_exp = list()
+    ppl_std_exp = list()
+    exp_name_exp = list()
+    ppl_min_exp = list()
+    ppl_max_exp = list()    
+
+    for ppl_data in ppl_data_list:
+        [exp_name, ppl_mean_, ppl_std, ppl_max, ppl_mn] = ppl_data
+        exp_name_exp.append(exp_name)
+        ppl_mean_exp.append(ppl_mean_)
+        ppl_std_exp.append(ppl_std)
+        ppl_min_exp.append(ppl_mn)
+        ppl_max_exp.append(ppl_max)
+
+    ppl_mean_exp = np.array(ppl_mean_exp)
+    lower_err = ppl_mean_exp - ppl_min_exp
+    upper_err = ppl_max_exp - ppl_mean_exp
+    yerr = [lower_err, upper_err]
+
+    fig, ax = plt.subplots(figsize=(18, 5))
+
+
+    bars = ax.bar(exp_name_exp, ppl_mean_exp, yerr=yerr, capsize=6, edgecolor='black', alpha=0.9)
+    # add mean markers
+    for bar, mean in zip(bars, ppl_mean_exp):
+        ax.plot(bar.get_x() + bar.get_width()/2, mean, 'o', markersize=5)
+
+    ax.set_yscale("log")
+    ax.set_ylabel("Perplexity (PPL)")
+    ax.set_title(f"PPL per Setting with Min–Max Range — {base_model}")
+    ax.grid(True, which="both", axis='y', linestyle='--', linewidth=0.7, alpha=0.6)
+    # plt.tight_layout()
+    plt.savefig(os.path.join(plot_dir, f"single_ppl.png"))
+    plt.close()
+
+def draw_relative_ppl_plot(ppl_data_list, base_model, plot_dir):
+
+    # make list a dict 
+    exp_data_dict = dict()
+    for ppl_data in ppl_data_list:
+        [exp_name, ppl_mean_exp, ppl_std_exp, ppl_max_exp, ppl_min_exp] = ppl_data
+        exp_data_dict[exp_name] = {
+            'mean': ppl_mean_exp,
+            'std': ppl_std_exp,
+            'max': ppl_max_exp,
+            'min': ppl_min_exp
+        }
+
+    # Find the base model data
+    base_ppl = None
+    for exp_name, vals in exp_data_dict.items():
+        if exp_name == base_model:
+            base_ppl = vals["mean"]
+            break
+    
+    if base_ppl is None:
+        print(f"Warning: Base model {base_model} not found in data")
+        return
+    
+    rel_means = {}
+    rel_stds = {}
+    for exp_name, vals in exp_data_dict.items():
+        if exp_name == base_model:
+            continue
+        # Calculate relative change from base
+
+        rel_change = (vals["mean"] - base_ppl) / base_ppl * 100.0
+        print(exp_name, vals["mean"], base_ppl, rel_change)
+        
+        rel_means[exp_name] = rel_change
+        # std propagated as % of base for visualizing uncertainty scale
+        rel_stds[exp_name] = vals["std"] / base_ppl * 100.0
+
+    # Create the plot
+    exp_names = list(rel_means.keys())
+    x = np.arange(len(exp_names))
+    
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    # Plot bars for each experiment
+    bars = ax.bar(x, [rel_means[name] for name in exp_names], 
+                  yerr=[rel_stds[name] for name in exp_names], 
+                  capsize=5, edgecolor='black', alpha=0.7)
+
+    ax.axhline(0, color='black', linewidth=0.8, linestyle='--')
+    ax.set_ylabel("Relative Δ PPL(exp-base/base) vs Base")
+    ax.set_title(f"Effect of Perturbations on PPL (Relative to {base_model})")
+    ax.set_xticks(x)
+    ax.set_xticklabels(exp_names, rotation=45, ha='right')
+    ax.grid(True, axis='y', linestyle='--', linewidth=0.7, alpha=0.6)
+    plt.tight_layout()
+    plt.savefig(os.path.join(plot_dir, f"relative_ppl.png"))
+    plt.close()
+
+
+def acc(jsonl):
+    acc = list() 
+    for key, val in jsonl.items():
+    
+        acc.append(val['acc']) 
+
+    return np.mean(acc)
 
 def extract_characters_regex(s):
     s = s.strip()
@@ -51,8 +162,9 @@ def ppl(jsonl):
     return np.mean(ppl), np.std(ppl), np.max(ppl), np.min(ppl)
 
 
-def filter_jsonl_by_acc(jsonl, ref_jsonl, filter_key, filter_value):
+def filter_jsonl_by_key(jsonl, ref_jsonl, filter_key, filter_value):
     filtered_jsonl = dict()
+    
     for key, item in ref_jsonl.items():
         if item[filter_key] == filter_value:
             # keys = list(jsonl.keys())[0]
@@ -153,7 +265,11 @@ if __name__ == '__main__':
         base_model_name = exp_name.split('|')[0]
         all_base_model[base_model_name].append(exp_name)
 
-
+    ppl_mean = list()
+    ppl_max = list()
+    ppl_min = list()
+    ppl_std = list()
+    settings = list() 
     for base_model, exp_settings in all_base_model.items():
         # base_model_jsonl = all_exp[base_model]
         print('Now analyzing', base_model)
@@ -163,53 +279,74 @@ if __name__ == '__main__':
             else:
                 ref_jsonl = None
 
-            
-            base_ppl_jsonl = group_jsonls(os.path.join(args.result_dir, base_model))
-            try:
-                base_ppl_jsonl = filter_jsonl_by_acc(base_ppl_jsonl, ref_jsonl, 'acc', 0.0)
-            except:
-                print(f'{base_model} has no acc == 1.0')
-                continue
-            ppl_mean, ppl_std, ppl_max, ppl_min = ppl(base_ppl_jsonl)
-            print(f'{base_model}: {os.path.join(args.ppl_ref_dir, base_model)} PPL: {ppl_mean:.4f} ± {ppl_std:.4f} (max: {ppl_max:.4f}, min: {ppl_min:.4f})')
+            ppl_data = list()
             for exp_setting in exp_settings:
                 exp_ppl_jsonl = group_jsonls(os.path.join(args.result_dir, exp_setting))
-                try:
-                    exp_ppl_jsonl = filter_jsonl_by_acc(exp_ppl_jsonl, ref_jsonl, 'acc', 1.0)
-                except:
-                    print(f'{exp_setting} has no acc == 1.0')
-                    continue
-                ppl_mean, ppl_std, ppl_max, ppl_min = ppl(exp_ppl_jsonl)
-                print(f'{exp_setting}: {os.path.join(args.result_dir, exp_setting)} PPL: {ppl_mean:.4f} ± {ppl_std:.4f} (max: {ppl_max:.4f}, min: {ppl_min:.4f})')
-        else:
-            for exp_setting in exp_settings:
-                if base_model != exp_setting:
-                    base_json_dir = os.path.join(args.result_dir, base_model)
-                    setting_json_dir = os.path.join(args.result_dir, exp_setting)
-                    base_config = parse_config(os.path.join(base_json_dir, 'config.json'))
-                    
-                    base_json_dict = group_jsonls(base_json_dir)
-                    setting_json_dict = group_jsonls(setting_json_dir)
+                if args.filter_key is not None and args.filter_value is not None:
+                    try:
+                        
+                        exp_ppl_jsonl = filter_jsonl_by_key(exp_ppl_jsonl, ref_jsonl, args.filter_key, args.filter_value)
+                    except:
+                        print(f'{exp_setting} has no acc == 1.0')
+                        continue
+
+             
+                ppl_mean_exp, ppl_std_exp, ppl_max_exp, ppl_min_exp = ppl(exp_ppl_jsonl)
+
+                exp_name = exp_setting.split('|')
+                if len(exp_name) > 1:
+                    exp_name = "\n".join(exp_name[1:])
+                else:
+                    exp_name = exp_name[0]
+
+
+                data = [exp_name, ppl_mean_exp, ppl_std_exp, ppl_max_exp, ppl_min_exp]
+                ppl_data.append(data)
                 
-                    headers, data = build_table(exp_setting, ) 
-                    cs, hit_rate, consistency_report = consistency(base_json_dict, setting_json_dict)
-                    headers.append('# items (base|exp)')
-                    data[0].append([f"{len(base_json_dict)}|{len(setting_json_dict)}"])
-                    headers.append('# acc (base|exp)')
-                    data[0].append([f"{acc(base_json_dict):.4f}|{acc(setting_json_dict):.4f}"])
-                    headers.append('# consistency')
-                    data[0].append([f"{cs:.4f}"])
-                    headers.append('# hit rate')
-                    data[0].append([f"{hit_rate:.4f}"])
-                    print(tabulate(data, headers=headers, tablefmt="grid"), )
-                    if args.save_report:
-                        print(f'saving report to {os.path.join(args.result_dir, f"{base_model}_vs_{exp_setting}.json")}')
-                        with open(os.path.join(args.result_dir, f'{base_model}_vs_{exp_setting}.json'), 'w') as f:
-                            json.dump(consistency_report, f, indent=4)
 
-            print('#'*200)
-            print('#'*200)
+            headers = ['exp_name', 'ppl_mean', 'ppl_std', 'ppl_max', 'ppl_min']
+            print(tabulate(ppl_data, headers=headers, tablefmt="grid"), )
 
+            if args.draw_ppl_plot:
+                plot_dir = os.path.join('plots', base_model)
+                os.makedirs(plot_dir, exist_ok=True)
+                
+                draw_ppl_plot(ppl_data, base_model, plot_dir)
+                draw_relative_ppl_plot(ppl_data, base_model, plot_dir)
+                
+
+
+        else:
+            acc_data = list()
+            base_json_dir = os.path.join(args.result_dir, base_model)                
+            base_json_dict = group_jsonls(base_json_dir)
+
+            acc_data.append([base_model, acc(base_json_dict), len(base_json_dict), '-', '-'])
+            
+            
+            for exp_setting in exp_settings:
+                if base_model == exp_setting:
+                    continue 
+                # if base_model != exp_setting:
+                exp_json_dir = os.path.join(args.result_dir, exp_setting)                
+                exp_json_dict = group_jsonls(exp_json_dir)
+            
+                # headers, data = build_table(exp_setting, ) 
+                exp_name = exp_setting.split('|')
+                if len(exp_name) > 1:
+                    exp_name = "\n".join(exp_name[1:])
+                else:
+                    exp_name = exp_name[0]
+
+
+                
+                cs, hit_rate, _ = consistency(base_json_dict, exp_json_dict)
+
+                data = [exp_name, acc(exp_json_dict), len(exp_json_dict ), cs, hit_rate]
+                acc_data.append(data)
+            headers = ['exp_name', 'acc', '# items', 'cs', 'hit_rate']
+            print(tabulate(acc_data, headers=headers, tablefmt="grid"), )   
+               
 
 
 
