@@ -175,7 +175,6 @@ def run_experiment(
         ppls = []
         inputs, ppl_inputs = get_inputs_func(prompt, frames, processor, ppl=ppl, answer=answer)
         
-        # try:
         if True:
 
             if inference_func is None:
@@ -204,9 +203,6 @@ def run_experiment(
             
             pbar.set_postfix({'accuracy': sum(accs)/len(accs), "gpu_id": kwargs.get('cur_gpu', 0)})
 
-        # except Exception as e: 
-        #     print(f"Error: {e}")
-        #     print(f"video_path: {video_path}")
 
 
             
