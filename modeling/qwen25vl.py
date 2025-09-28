@@ -70,10 +70,13 @@ def setup_model(model_base, device, text_only_model=False):
         trust_remote_code=True
     )
     min_pixels = 256 * 28 * 28
-    max_pixels = 2560 * 28 * 28 
+    max_pixels = 10240 * 28 * 28 
+    from transformers import AutoImageProcessor
+
     processor = AutoProcessor.from_pretrained(model_base,  min_pixels=min_pixels, max_pixels=max_pixels, trust_remote_code=True)
   
     return model, processor
 
 modeling_funcs_builder.register("Qwen2.5-VL", setup_model, get_inputs_func)
+modeling_funcs_builder.register("Video-R1", setup_model, get_inputs_func)
     

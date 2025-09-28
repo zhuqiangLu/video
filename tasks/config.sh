@@ -5,7 +5,18 @@
 # TASK=lmms-lab/Video-MME
 TASK=motionbench
 # TASK=mvbench
-RESULT_DIR=results/ppl/$TASK
+PPL=False
+
+RESULT_DIR=results/acc/$TASK
+if [ "$PPL" = True ]; then
+	RESULT_DIR="results/ppl/$TASK"
+else
+	RESULT_DIR="results/acc/$TASK"
+fi
+
+echo $RESULT_DIR
+
+
 BACKEND=av
 LIMIT=1.0
 MAX_NEW_TOKENS=128
@@ -16,7 +27,6 @@ export http_proxy=https://wanglintao:iHiz3wPzlBGIJ2YEkSlVlG8GKoffQNgbQVv9S6SswYQ
 export https_proxy=https://wanglintao:iHiz3wPzlBGIJ2YEkSlVlG8GKoffQNgbQVv9S6SswYQw1tr3Lvf7N7tTwGCW@blsc-proxy.pjlab.org.cn:13128
 
 
-PPL=True
 # MODEL_BASE=HuggingFaceTB/SmolVLM2-2.2B-Instruct
 # NUM_FRAMES=16
 
@@ -29,9 +39,11 @@ PPL=True
 # MODEL_BASE=OpenGVLab/InternVL3_5-2B
 # NUM_FRAMES=16
 
-MODEL_BASE=Qwen/Qwen2.5-VL-3B-Instruct
-NUM_FRAMES=8
-
+# MODEL_BASE=models/Qwen2.5-VL-3B-Instruct
+MODEL_BASE=models/Qwen2.5-VL-7B-Instruct
+MODEL_BASE=models/Video-R1-7B
+# MODEL_BASE=checkpoints/test_run_Qwen2.5-VL
+NUM_FRAMES=16
 
 
 
@@ -49,7 +61,7 @@ case $TASK in
         DATA_FILES=/home/bingxing2/ailab/scxlab0109/.cache/huggingface/hub/datasets--TIGER-Lab--VideoEval-Pro/snapshots/a38a853b22576c7918e9cc0d1d4eedf9d46a1cae/data/test-00000-of-00001.parquet
         ;;
     "motionbench")
-        VIDEO_ROOT=/home/bingxing2/ailab/scxlab0109/.cache/huggingface/hub/datasets--zhuqiang--motion_data/snapshots/2d0613058c3f98330061bfad717d39b832f65f8f/MotionBench/
+        VIDEO_ROOT=benchmarks/motionbench/MotionBench/
         DATA_FILES=None
         ;;
     "mvbench")
