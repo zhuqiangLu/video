@@ -296,13 +296,13 @@ class Qwen2VLGRPOTrainer(Trainer):
             num_return_sequences=self.num_generations,
             pad_token_id=pad_token_id,
         )
-        self.shuffled_num_generations = self.num_generations // 2
-        self.shuffled_generation_config = GenerationConfig(
+        self.pertubated_num_generations = self.num_generations // 2
+        self.pertubated_generation_config = GenerationConfig(
             max_new_tokens=self.max_completion_length,
             do_sample=True,
             top_p=0.95,  
             temperature=1, # HACK
-            num_return_sequences=self.shuffled_num_generations,
+            num_return_sequences=self.pertubated_num_generations,
             pad_token_id=pad_token_id,
         )
         
@@ -486,10 +486,10 @@ class Qwen2VLGRPOTrainer(Trainer):
                 add_special_tokens=False,
             )
             pertubated_prompt_inputs = super()._prepare_inputs(pertubated_prompt_inputs)
-            shuffled_prompt_ids, shuffled_prompt_mask = pertubated_prompt_inputs["input_ids"], pertubated_prompt_inputs["attention_mask"]
+            pertubated_prompt_ids, pertubated_prompt_mask = pertubated_prompt_inputs["input_ids"], pertubated_prompt_inputs["attention_mask"]
             if self.max_prompt_length is not None:
-                shuffled_prompt_ids = shuffled_prompt_ids[:, -self.max_prompt_length :]
-                shuffled_prompt_mask = shuffled_prompt_mask[:, -self.max_prompt_length :]
+                pertubated_prompt_ids = pertubated_prompt_ids[:, -self.max_prompt_length :]
+                pertubated_prompt_mask = pertubated_prompt_mask[:, -self.max_prompt_length :]
         
         
         # Generate completions
@@ -504,15 +504,15 @@ class Qwen2VLGRPOTrainer(Trainer):
                 
                 if video_inputs:
             
-                    shuffled_prompt_completion_ids = unwrapped_model.generate(**pertubated_prompt_inputs, generation_config=self.shuffled_generation_config)
-                    shuffled_prompt_length = shuffled_prompt_ids.size(1)
-                    shuffled_prompt_ids = shuffled_prompt_completion_ids[:, :shuffled_prompt_length]
-                    shuffled_completion_ids = shuffled_prompt_completion_ids[:, shuffled_prompt_length:]
-                    shuffled_prompt_mask = prompt_mask.repeat_interleave(self.shuffled_num_generations, dim=0)
+                    pertubated_prompt_completion_ids = unwrapped_model.generate(**pertubated_prompt_inputs, generation_config=self.pertubated_generation_config)
+                    pertubated_prompt_length = pertubated_prompt_ids.size(1)
+                    pertubated_prompt_ids = pertubated_prompt_completion_ids[:, :pertubated_prompt_length]
+                    pertubated_completion_ids = pertubated_prompt_completion_ids[:, pertubated_prompt_length:]
+                    pertubated_prompt_mask = prompt_mask.repeat_interleave(self.pertubated_num_generations, dim=0)
                     
                 else:
                     
-                    shuffled_prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.dummy_generation_config)
+                    pertubated_prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.dummy_generation_config)
 
         
         print('path:', input_copy[0]['content'][0][inputs[0]['data_type']])   
@@ -585,24 +585,24 @@ class Qwen2VLGRPOTrainer(Trainer):
         per_token_kl = torch.exp(x_clamped) - x_clamped - 1
         
         if self.temporal and video_inputs:
-            shuffled_completions = self.processing_class.batch_decode(shuffled_completion_ids, skip_special_tokens=True)
+            pertubated_completions = self.processing_class.batch_decode(pertubated_completion_ids, skip_special_tokens=True)
             if is_conversational(inputs[0]):
-                shuffled_completions = [[{"role": "assistant", "content": shuffled_completion}] for shuffled_completion in shuffled_completions]
+                pertubated_completions = [[{"role": "assistant", "content": pertubated_completion}] for pertubated_completion in pertubated_completions]
                 
             # Compute the rewards
-            shuffled_prompts = [prompt for prompt in prompts for _ in range(self.shuffled_num_generations)]
-            shuffled_rewards_per_func = torch.zeros(len(shuffled_prompts), len(self.reward_funcs), device=device)
+            pertubated_prompts = [prompt for prompt in prompts for _ in range(self.pertubated_num_generations)]
+            pertubated_rewards_per_func = torch.zeros(len(pertubated_prompts), len(self.reward_funcs), device=device)
             for i, (reward_func, reward_processing_class) in enumerate(
                 zip(self.reward_funcs, self.reward_processing_classes)
             ):
                 # Repeat all input columns (but "prompt" and "completion") to match the number of generations
-                shuffled_reward_kwargs = {key: [] for key in inputs[0].keys() if key not in ["prompt", "completion"]}
-                for key in shuffled_reward_kwargs:
+                pertubated_reward_kwargs = {key: [] for key in inputs[0].keys() if key not in ["prompt", "completion"]}
+                for key in pertubated_reward_kwargs:
                     for example in inputs:
                         # Repeat each value in the column for `num_generations` times
-                        shuffled_reward_kwargs[key].extend([example[key]] * self.shuffled_num_generations)
-                shuffled_output_reward_func = reward_func(prompts=shuffled_prompts, completions=shuffled_completions, **shuffled_reward_kwargs)
-                shuffled_rewards_per_func[:, i] = torch.tensor(shuffled_output_reward_func, dtype=torch.float32, device=device)
+                        pertubated_reward_kwargs[key].extend([example[key]] * self.pertubated_num_generations)
+                pertubated_output_reward_func = reward_func(prompts=pertubated_prompts, completions=pertubated_completions, **pertubated_reward_kwargs)
+                pertubated_rewards_per_func[:, i] = torch.tensor(pertubated_output_reward_func, dtype=torch.float32, device=device)
 
         
         # Decode the generated completions
@@ -632,9 +632,9 @@ class Qwen2VLGRPOTrainer(Trainer):
             temporal_rewards_per_func = rewards_per_func.clone()
             
             acc_mean = temporal_rewards_per_func[:, 0].mean()
-            shuffled_acc_mean = shuffled_rewards_per_func[:, 0].mean()
+            pertubated_acc_mean = pertubated_rewards_per_func[:, 0].mean()
 
-            if acc_mean >= 0.8 * shuffled_acc_mean:
+            if acc_mean >= 0.8 * pertubated_acc_mean:
                 mask = temporal_rewards_per_func[:, 0] > 0.1
                 temporal_rewards_per_func[mask, 0] = temporal_rewards_per_func[mask, 0] + 0.3
                 temporal_rewards = torch.tensor([1.0]).to('cuda')
