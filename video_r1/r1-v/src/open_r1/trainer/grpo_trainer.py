@@ -468,7 +468,7 @@ class Qwen2VLGRPOTrainer(Trainer):
                 pertubated_video_inputs = [video_inputs[0][indices]]
             elif pertubation_type == 'frozen':
                 indices = torch.randperm(video_inputs[0].size(0))
-                indices = indices[0] * len(video_inputs[0].size(0))
+                indices = indices[0] * video_inputs[0].size(0)
                 pertubated_video_inputs = [video_inputs[0][indices]]
             elif pertubation_type == 'reverse':
                 indices = list(range(video_inputs[0].size(0)))[::-1]
