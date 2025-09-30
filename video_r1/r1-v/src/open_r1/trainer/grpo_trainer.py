@@ -460,36 +460,35 @@ class Qwen2VLGRPOTrainer(Trainer):
             # 3. reverse frames 
             # 4. no video 
 
-            # randomly select one of the following pertubation
-            pertubation_type = random.choice(['shuffle', 'frozen', 'reverse', 'no_video'])
+            # randomly select one of the following perturbation
+            perturbation_type = random.choice(['shuffle', 'frozen', 'reverse'])
             
-            if pertubation_type == 'shuffle':
+            if perturbation_type == 'shuffle':
                 indices = torch.randperm(video_inputs[0].size(0))
-                pertubated_video_inputs = [video_inputs[0][indices]]
-            elif pertubation_type == 'frozen':
-                indices = torch.randperm(video_inputs[0].size(0))
-                indices = indices[0] * len(video_inputs[0].size(0))
-                pertubated_video_inputs = [video_inputs[0][indices]]
-            elif pertubation_type == 'reverse':
-                pertubated_video_inputs = [video_inputs[0][::-1]]
-            elif pertubation_type == 'no_video':
-                pertubated_video_inputs = None
+                perturbed_video_inputs = [video_inputs[0][indices]]
+            elif perturbation_type == 'frozen':
+                # Take the first frame and repeat it for all frames
+                first_frame = video_inputs[0][0:1]  # Keep batch dimension
+                frozen_video = first_frame.repeat(video_inputs[0].size(0), 1, 1, 1)
+                perturbed_video_inputs = [frozen_video]
+            elif perturbation_type == 'reverse':
+                perturbed_video_inputs = [video_inputs[0][::-1]]
                 
 
-            pertubated_prompt_inputs = self.processing_class(
+            perturbed_prompt_inputs = self.processing_class(
                 text=copy.deepcopy(prompts_text),
                 images=image_inputs,
-                videos=pertubated_video_inputs,
+                videos=perturbed_video_inputs,
                 return_tensors="pt",
                 padding=True,
                 padding_side="left",
                 add_special_tokens=False,
             )
-            pertubated_prompt_inputs = super()._prepare_inputs(pertubated_prompt_inputs)
-            pertubated_prompt_ids, pertubated_prompt_mask = pertubated_prompt_inputs["input_ids"], pertubated_prompt_inputs["attention_mask"]
+            perturbed_prompt_inputs = super()._prepare_inputs(perturbed_prompt_inputs)
+            perturbed_prompt_ids, perturbed_prompt_mask = perturbed_prompt_inputs["input_ids"], perturbed_prompt_inputs["attention_mask"]
             if self.max_prompt_length is not None:
-                pertubated_prompt_ids = pertubated_prompt_ids[:, -self.max_prompt_length :]
-                pertubated_prompt_mask = pertubated_prompt_mask[:, -self.max_prompt_length :]
+                perturbed_prompt_ids = perturbed_prompt_ids[:, -self.max_prompt_length :]
+                perturbed_prompt_mask = perturbed_prompt_mask[:, -self.max_prompt_length :]
         
         
         # Generate completions
@@ -504,15 +503,15 @@ class Qwen2VLGRPOTrainer(Trainer):
                 
                 if video_inputs:
             
-                    pertubated_prompt_completion_ids = unwrapped_model.generate(**pertubated_prompt_inputs, generation_config=self.pertubated_generation_config)
-                    pertubated_prompt_length = pertubated_prompt_ids.size(1)
-                    pertubated_prompt_ids = pertubated_prompt_completion_ids[:, :pertubated_prompt_length]
-                    pertubated_completion_ids = pertubated_prompt_completion_ids[:, pertubated_prompt_length:]
-                    pertubated_prompt_mask = prompt_mask.repeat_interleave(self.pertubated_num_generations, dim=0)
+                    perturbed_prompt_completion_ids = unwrapped_model.generate(**perturbed_prompt_inputs, generation_config=self.pertubated_generation_config)
+                    perturbed_prompt_length = perturbed_prompt_ids.size(1)
+                    perturbed_prompt_ids = perturbed_prompt_completion_ids[:, :perturbed_prompt_length]
+                    perturbed_completion_ids = perturbed_prompt_completion_ids[:, perturbed_prompt_length:]
+                    perturbed_prompt_mask = prompt_mask.repeat_interleave(self.shuffled_num_generations, dim=0)
                     
                 else:
                     
-                    pertubated_prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.dummy_generation_config)
+                    perturbed_prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.dummy_generation_config)
 
         
         print('path:', input_copy[0]['content'][0][inputs[0]['data_type']])   
