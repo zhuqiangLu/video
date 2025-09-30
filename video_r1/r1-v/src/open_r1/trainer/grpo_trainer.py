@@ -434,7 +434,7 @@ class Qwen2VLGRPOTrainer(Trainer):
             return_tensors="pt",
             padding=True,
             padding_side="left",
-            add_special_tokens=False,
+            add_special_tokens=True,
         )
         
         
@@ -461,19 +461,22 @@ class Qwen2VLGRPOTrainer(Trainer):
             # 4. no video 
 
             # randomly select one of the following pertubation
-            pertubation_type = random.choice(['shuffle', 'frozen', 'reverse', 'no_video'])
+            # pertubation_type = random.choice(['shuffle', 'frozen', 'reverse', 'no_video'])
             
-            if pertubation_type == 'shuffle':
-                indices = torch.randperm(video_inputs[0].size(0))
-                pertubated_video_inputs = [video_inputs[0][indices]]
-            elif pertubation_type == 'frozen':
-                indices = torch.randperm(video_inputs[0].size(0))
-                indices = indices[0] * len(video_inputs[0].size(0))
-                pertubated_video_inputs = [video_inputs[0][indices]]
-            elif pertubation_type == 'reverse':
-                pertubated_video_inputs = [video_inputs[0][::-1]]
-            elif pertubation_type == 'no_video':
-                pertubated_video_inputs = None
+            # if pertubation_type == 'shuffle':
+            #     indices = torch.randperm(video_inputs[0].size(0))
+            #     pertubated_video_inputs = [video_inputs[0][indices]]
+            # elif pertubation_type == 'frozen':
+            #     indices = torch.randperm(video_inputs[0].size(0))
+            #     indices = indices[0] * len(video_inputs[0].size(0))
+            #     pertubated_video_inputs = [video_inputs[0][indices]]
+            # elif pertubation_type == 'reverse':
+            #     pertubated_video_inputs = [video_inputs[0][::-1]]
+            # elif pertubation_type == 'no_video':
+            #     pertubated_video_inputs = None
+
+            indices = torch.randperm(video_inputs[0].size(0))
+            pertubated_video_inputs = [video_inputs[0][indices]]
                 
 
             pertubated_prompt_inputs = self.processing_class(
@@ -483,7 +486,7 @@ class Qwen2VLGRPOTrainer(Trainer):
                 return_tensors="pt",
                 padding=True,
                 padding_side="left",
-                add_special_tokens=False,
+                add_special_tokens=True,
             )
             pertubated_prompt_inputs = super()._prepare_inputs(pertubated_prompt_inputs)
             pertubated_prompt_ids, pertubated_prompt_mask = pertubated_prompt_inputs["input_ids"], pertubated_prompt_inputs["attention_mask"]
