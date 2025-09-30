@@ -471,7 +471,8 @@ class Qwen2VLGRPOTrainer(Trainer):
                 indices = indices[0] * len(video_inputs[0].size(0))
                 pertubated_video_inputs = [video_inputs[0][indices]]
             elif pertubation_type == 'reverse':
-                pertubated_video_inputs = [video_inputs[0][::-1]]
+                indices = list(range(video_inputs[0].size(0)))[::-1]
+                pertubated_video_inputs = [video_inputs[0][indices]]
             elif pertubation_type == 'no_video':
                 pertubated_video_inputs = None
                 
