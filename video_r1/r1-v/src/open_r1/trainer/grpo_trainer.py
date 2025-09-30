@@ -454,19 +454,39 @@ class Qwen2VLGRPOTrainer(Trainer):
             prompt_mask = prompt_mask[:, -self.max_prompt_length :]
             
         if self.temporal and video_inputs:
-            indices = torch.randperm(video_inputs[0].size(0))
-            shuffled_video_inputs = [video_inputs[0][indices]]
-            shuffled_prompt_inputs = self.processing_class(
+            # UPDATE: origin video_r1 only consider shuffled frames, now I add more pertubation:
+            # 1. shuffle frames, 
+            # 2. frozen video 
+            # 3. reverse frames 
+            # 4. no video 
+
+            # randomly select one of the following pertubation
+            pertubation_type = random.choice(['shuffle', 'frozen', 'reverse', 'no_video'])
+            
+            if pertubation_type == 'shuffle':
+                indices = torch.randperm(video_inputs[0].size(0))
+                pertubated_video_inputs = [video_inputs[0][indices]]
+            elif pertubation_type == 'frozen':
+                indices = torch.randperm(video_inputs[0].size(0))
+                indices = indices[0] * len(video_inputs[0].size(0))
+                pertubated_video_inputs = [video_inputs[0][indices]]
+            elif pertubation_type == 'reverse':
+                pertubated_video_inputs = [video_inputs[0][::-1]]
+            elif pertubation_type == 'no_video':
+                pertubated_video_inputs = None
+                
+
+            pertubated_prompt_inputs = self.processing_class(
                 text=copy.deepcopy(prompts_text),
                 images=image_inputs,
-                videos=shuffled_video_inputs,
+                videos=pertubated_video_inputs,
                 return_tensors="pt",
                 padding=True,
                 padding_side="left",
                 add_special_tokens=False,
             )
-            shuffled_prompt_inputs = super()._prepare_inputs(shuffled_prompt_inputs)
-            shuffled_prompt_ids, shuffled_prompt_mask = shuffled_prompt_inputs["input_ids"], shuffled_prompt_inputs["attention_mask"]
+            pertubated_prompt_inputs = super()._prepare_inputs(pertubated_prompt_inputs)
+            shuffled_prompt_ids, shuffled_prompt_mask = pertubated_prompt_inputs["input_ids"], pertubated_prompt_inputs["attention_mask"]
             if self.max_prompt_length is not None:
                 shuffled_prompt_ids = shuffled_prompt_ids[:, -self.max_prompt_length :]
                 shuffled_prompt_mask = shuffled_prompt_mask[:, -self.max_prompt_length :]
@@ -484,7 +504,7 @@ class Qwen2VLGRPOTrainer(Trainer):
                 
                 if video_inputs:
             
-                    shuffled_prompt_completion_ids = unwrapped_model.generate(**shuffled_prompt_inputs, generation_config=self.shuffled_generation_config)
+                    shuffled_prompt_completion_ids = unwrapped_model.generate(**pertubated_prompt_inputs, generation_config=self.shuffled_generation_config)
                     shuffled_prompt_length = shuffled_prompt_ids.size(1)
                     shuffled_prompt_ids = shuffled_prompt_completion_ids[:, :shuffled_prompt_length]
                     shuffled_completion_ids = shuffled_prompt_completion_ids[:, shuffled_prompt_length:]
