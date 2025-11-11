@@ -63,6 +63,8 @@ def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):
         text_full = processor.tokenizer.apply_chat_template(msgs_full, tokenize=False, add_generation_prompt=False)
         enc_full  = processor(text=text_full, images=frames, padding=True, return_tensors="pt")
 
+        inputs = enc_full
+
         full_ids = enc_full.input_ids
         head_ids = enc_head.input_ids
         attn     = enc_full.attention_mask if "attention_mask" in enc_full else torch.ones_like(full_ids)
@@ -81,6 +83,7 @@ def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):
                 "start_idx": start_idx,
                 "end_idx": end_idx,
             })
+
 
     return inputs, ppl_inputs 
     
