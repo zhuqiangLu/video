@@ -60,13 +60,15 @@ def defualt_inference_func(model, processor, inputs, max_new_tokens, use_cache, 
     ppl_value = None
 
     if ppl:
-        start_idx = ppl_inputs.get("start_idx", None)
+        # start_idx = ppl_inputs.get("start_idx", None)
 
-        # target_ids = torch.ones_like(input_ids) 
-        target_ids = input_ids.clone()
-        labels = input_ids.clone()
+        # # target_ids = torch.ones_like(input_ids) 
+        # target_ids = input_ids.clone()
+        # labels = input_ids.clone()
 
-        labels[:, :start_idx] = -100
+        # labels[:, :start_idx] = -100
+        label = ppl_inputs["labels"].to(model.device)
+        
 
         
         
@@ -78,31 +80,7 @@ def defualt_inference_func(model, processor, inputs, max_new_tokens, use_cache, 
             nll = output_ids.loss
             ppl_value = float(torch.exp(nll))
 
-            # logits = output_ids.logits
-
-            # shift_logits = logits[:, :-1].contiguous() 
-            # shift_labels = labels[:, 1:].contiguous()
-
-            # if processor.tokenizer.pad_token_id is not None:
-            #     shift_labels[shift_labels == processor.tokenizer.pad_token_id] = -100
-            # log_probs = torch.nn.functional.log_softmax(shift_logits, dim=-1) 
-
-            # 
-            # # shift_log_probs = log_probs.gather(dim=-1, index=shift_labels.unsqueeze(dim=-1)).squeeze(dim=1) 
         
-            # start_idx -= 1 # because of the shifted
-            # shift_log_probs = log_probs[:, start_idx:].gather(dim=-1, index=shift_labels[:, start_idx:].unsqueeze(dim=-1)).squeeze(dim=1) 
-
-
-
-            # 
-            # nll = -shift_log_probs.mean()
-
-            # logits_ppl = float(torch.exp(nll))
-            # 
-
-            # print(loss_ppl, logits_ppl)
-
 
         
 
@@ -174,6 +152,7 @@ def run_experiment(
         accs = []
         ppls = []
         inputs, ppl_inputs = get_inputs_func(prompt, frames, processor, ppl=ppl, answer=answer)
+
         
         if True:
 
@@ -195,8 +174,6 @@ def run_experiment(
             accs.append(acc)
 
             ppls.append(ppl_value)
-
-            
             
             item_res = {'video_path': video_path, 'prompt':prompt, 'gt':answer, 'pred':pred, 'acc':acc, 'ppl':ppl_value}
             append_to_jsonl(log_path, item_res)

@@ -136,7 +136,7 @@ def get_inputs_func(prompt, frames, processor, input_size=448, max_num=1, num_se
     if ppl:
         raise NotImplementedError("PPL is not supported for InternVL3")
 
-    return ret
+    return ret, ppl_inputs
                 
         
 
@@ -159,7 +159,7 @@ def setup_model(model_base, device, text_only_model=False):
     return model, tokenizer
 
 
-def inference_func(model, tokenizer, inputs, max_new_tokens=20, use_cache=True):
+def inference_func(model, tokenizer, inputs, max_new_tokens=20, use_cache=True, ppl=False, **ppl_inputs):
     question = inputs['question']
     pixel_values = inputs['pixel_values'].to(model.device) if inputs['pixel_values'] is not None else None
     num_patches_list = inputs['num_patches_list']
