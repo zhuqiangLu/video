@@ -67,7 +67,7 @@ def defualt_inference_func(model, processor, inputs, max_new_tokens, use_cache, 
         # labels = input_ids.clone()
 
         # labels[:, :start_idx] = -100
-        label = ppl_inputs["labels"].to(model.device)
+        labels = ppl_inputs["labels"].to(model.device)
         
 
         

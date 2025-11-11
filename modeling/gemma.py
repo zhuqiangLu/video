@@ -33,11 +33,11 @@ def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):
     for image in frames:
         content.append({"type": "image", "image": image})
     
-    messages = [
+    messages_user = [
         {"role": "user", "content": content},
     ]
 
-    text = processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    text = processor.tokenizer.apply_chat_template(messages_user, tokenize=False, add_generation_prompt=True)
     if len(frames) == 0:
         frames = None
     inputs = processor(text=text, images=frames, padding=False, return_tensors="pt")
@@ -56,12 +56,12 @@ def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):
         # 1) User + assistant header (empty assistant text)
         msgs_head = messages_user + [{"role": "assistant", "content": [{"type":"text","text":""}]}]
         text_head = processor.tokenizer.apply_chat_template(msgs_head, tokenize=False, add_generation_prompt=False)
-        enc_head  = processor(text=text_head, images=images, padding=False, return_tensors="pt")
+        enc_head  = processor(text=text_head, images=frames, padding=False, return_tensors="pt")
 
         # 2) Full = User + assistant full answer
         msgs_full = messages_user + [{"role": "assistant", "content": [{"type":"text","text":answer}]}]
         text_full = processor.tokenizer.apply_chat_template(msgs_full, tokenize=False, add_generation_prompt=False)
-        enc_full  = processor(text=text_full, images=images, padding=True, return_tensors="pt")
+        enc_full  = processor(text=text_full, images=frames, padding=True, return_tensors="pt")
 
         full_ids = enc_full.input_ids
         head_ids = enc_head.input_ids
