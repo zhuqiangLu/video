@@ -46,12 +46,7 @@ def get_inputs_func(prompt, frames, processor,  ppl=False, answer=None):
 
     if ppl:
         assert answer is not None
-        # start_idx = inputs.input_ids.shape[1] 
-
-        # messages.append({"role": "assistant", "content": [{"type": "text", "text": answer}]})
-        # text = processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
-        # inputs = processor(text=text, images=frames, padding=False, return_tensors="pt")
-
+        
 
         # 1) User + assistant header (empty assistant text)
         msgs_head = messages_user + [{"role": "assistant", "content": [{"type":"text","text":""}]}]
